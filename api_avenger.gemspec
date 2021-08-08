@@ -1,7 +1,7 @@
 package_name = Dir.glob("*.gemspec")[0].split(".")[0]
 require_relative "lib/#{package_name}/version"
 
-package = MY_NEW_GEM
+package = ApiAvenger
 
 
 Gem::Specification.new do |s|
@@ -15,6 +15,8 @@ Gem::Specification.new do |s|
 
   s.files       = Dir.glob("lib/**/*")
   s.test_files  = Dir.glob("spec/**/*_spec.rb")
+
+  s.add_dependency "faraday"
 
   s.add_development_dependency "byebug"
   s.add_development_dependency "codecov"

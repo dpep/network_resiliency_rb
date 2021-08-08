@@ -21,3 +21,14 @@ RSpec.configure do |config|
 end
 
 # Dir["./spec/support/**/*.rb"].sort.each { |f| require f }
+
+
+class ApiSimulator
+  def call(env)
+    [ 200, {'Content-Type' => 'text/html'}, ["OK"] ]
+  end
+end
+
+Faraday.new do |conn|
+  conn.adapter :rack, ApiSimulator.new
+end
