@@ -18,6 +18,11 @@ require gem_name
 RSpec.configure do |config|
   # allow "fit" examples
   config.filter_run_when_matching :focus
+
+  config.mock_with :rspec do |mocks|
+    # verify existence of stubbed methods
+    mocks.verify_partial_doubles = true
+  end
 end
 
 # Dir["./spec/support/**/*.rb"].sort.each { |f| require f }
