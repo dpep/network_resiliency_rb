@@ -1,3 +1,4 @@
+require "api_avenger/stats"
 require "api_avenger/version"
 
 module ApiAvenger
