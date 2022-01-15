@@ -42,7 +42,6 @@ module ApiAvenger
 
       self
     end
-    alias_method :+, :merge
 
     private
 
