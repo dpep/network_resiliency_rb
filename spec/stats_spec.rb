@@ -1,5 +1,5 @@
 describe ApiAvenger::Stats do
-  let(:precision) { 0.0001 }
+  let(:precision) { 0.001 } # percent
   let(:stats) { described_class.new }
 
   def calc_avg(values)
@@ -24,7 +24,14 @@ describe ApiAvenger::Stats do
       data = 1..31
 
       expect(calc_avg(data)).to eq 16
-      expect(calc_stdev(data)).to be_within(precision).of(8.94427)
+      expect(calc_stdev(data)).to be_within(precision).percent_of(8.94427)
+    end
+
+    specify 'yet another' do
+      data = [ 10, 12, 23, 23, 16, 23, 21, 16 ]
+
+      expect(calc_avg(data)).to eq 18
+      expect(calc_stdev(data)).to be_within(precision).percent_of(4.898979)
     end
   end
 
@@ -39,8 +46,8 @@ describe ApiAvenger::Stats do
         stats << val
 
         expect(stats.n).to eq data.count
-        expect(stats.avg).to be_within(precision).of(calc_avg(data))
-        expect(stats.stdev).to be_within(precision).of(calc_stdev(data))
+        expect(stats.avg).to be_within(precision).percent_of(calc_avg(data))
+        expect(stats.stdev).to be_within(precision).percent_of(calc_stdev(data))
       end
     end
 
@@ -54,8 +61,8 @@ describe ApiAvenger::Stats do
         stats << values
 
         expect(stats.n).to eq data.count
-        expect(stats.avg).to be_within(precision).of(calc_avg(data))
-        expect(stats.stdev).to be_within(precision).of(calc_stdev(data))
+        expect(stats.avg).to be_within(precision).percent_of(calc_avg(data))
+        expect(stats.stdev).to be_within(precision).percent_of(calc_stdev(data))
       end
     end
 
@@ -69,10 +76,10 @@ describe ApiAvenger::Stats do
         stats << described_class.new(values)
 
         expect(stats.n).to eq data.count
-        expect(stats.avg).to be_within(precision).of(calc_avg(data))
+        expect(stats.avg).to be_within(precision).percent_of(calc_avg(data))
 
         expect(stats.stdev).to be_within(2).percent_of(calc_stdev(data))
-        # expect(stats.stdev).to be_within(precision).of(calc_stdev(data))
+        expect(stats.stdev).to be_within(precision).percent_of(calc_stdev(data))
       end
     end
 
@@ -80,8 +87,8 @@ describe ApiAvenger::Stats do
       data = 1000.times.map { rand }
       data.each {|x| stats << x }
 
-      expect(stats.avg).to be_within(precision).of(calc_avg(data))
-      expect(stats.stdev).to be_within(precision).of(calc_stdev(data))
+      expect(stats.avg).to be_within(precision).percent_of(calc_avg(data))
+      expect(stats.stdev).to be_within(precision).percent_of(calc_stdev(data))
     end
   end
 end
