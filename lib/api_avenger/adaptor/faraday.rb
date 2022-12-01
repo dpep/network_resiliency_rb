@@ -13,3 +13,7 @@ module ApiAvenger
     end
   end
 end
+
+Faraday::Request.register_middleware(
+  api_avenger: ApiAvenger::Adapter::Faraday,
+)
