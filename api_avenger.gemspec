@@ -1,20 +1,15 @@
-package_name = Dir.glob("*.gemspec")[0].split(".")[0]
-require "./lib/#{package_name}/version"
-
+require_relative "lib/api_avenger/version"
 package = ApiAvenger
 
-
 Gem::Specification.new do |s|
-  s.name        = package_name
-  s.version     = package.const_get "VERSION"
   s.authors     = ["Daniel Pepper"]
-  s.summary     = package.to_s
   s.description = "..."
-  s.homepage    = "https://github.com/dpep/#{package_name}_rb"
+  s.files       = `git ls-files * ':!:spec'`.split("\n")
+  s.homepage    = "https://github.com/dpep/api_avenger_rb"
   s.license     = "MIT"
-
-  s.files       = Dir.glob("lib/**/*")
-  s.test_files  = Dir.glob("spec/**/*_spec.rb")
+  s.name        = File.basename(__FILE__).split(".")[0]
+  s.summary     = package.to_s
+  s.version     = package.const_get "VERSION"
 
   s.add_dependency "faraday"
 
