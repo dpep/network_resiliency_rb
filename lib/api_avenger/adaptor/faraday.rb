@@ -1,7 +1,7 @@
 require "faraday"
 
 module ApiAvenger
-  module Adaptor
+  module Adapter
     class Faraday < ::Faraday::Middleware
       def on_request(env)
         puts "on_request to: #{env.url}"

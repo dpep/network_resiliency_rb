@@ -12,7 +12,7 @@ describe ApiAvenger::Stats do
     Math.sqrt(sq_diff / values.count)
   end
 
-  describe 'helper methods' do
+  fdescribe 'helper methods' do
     specify 'sanity check' do
       data = [ 1, 2, 3, 4, 5 ]
 
