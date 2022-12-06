@@ -240,4 +240,14 @@ describe ApiAvenger::Stats do
     #   end
     # end
   end
+
+  describe "#variance" do
+    before { stats << 1_000.times.map { choose } }
+
+    it { expect(Math.sqrt(stats.variance)).to eq(stats.stdev) }
+
+    describe "of a sample" do
+      it { expect(stats.variance(sample: true)).to be > stats.variance }
+    end
+  end
 end

@@ -34,7 +34,7 @@ module ApiAvenger
     end
 
     def variance(sample: false)
-      @sq_dist / (sample ? (@n + 1) : @n)
+      @sq_dist / (sample ? (@n - 1) : @n)
     end
 
     def stdev
