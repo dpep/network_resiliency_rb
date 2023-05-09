@@ -4,7 +4,7 @@ ApiAvenger
 
 
 ```ruby
-require "api_avenger"
+require "network_resiliency"
 ```
 
 
@@ -22,5 +22,5 @@ Yes please  :)
 
 
 ----
-![Gem](https://img.shields.io/gem/dt/api_avenger?style=plastic)
-[![codecov](https://codecov.io/gh/dpep/api_avenger_rb/branch/main/graph/badge.svg)](https://codecov.io/gh/dpep/api_avenger_rb)
+![Gem](https://img.shields.io/gem/dt/network_resiliency?style=plastic)
+[![codecov](https://codecov.io/gh/dpep/network_resiliency_rb/branch/main/graph/badge.svg)](https://codecov.io/gh/dpep/network_resiliency_rb)

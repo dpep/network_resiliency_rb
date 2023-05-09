@@ -1,10 +1,10 @@
 require "faraday"
 
-module ApiAvenger
+module NetworkResiliency
   module Adapter
     class Faraday < ::Faraday::Middleware
       def call(env)
-        puts "ApiAvenger called: #{env.url}"
+        puts "NetworkResiliency called: #{env.url}"
 # env.options.timeout = 0.001
 # open_timeout
 
@@ -12,7 +12,7 @@ module ApiAvenger
         # predict time
         # get dynamic timeout
 
-        if ApiAvenger.enabled?
+        if NetworkResiliency.enabled?
           # temp update timeout
           # with_timeout(...) { super }
         else
@@ -55,5 +55,5 @@ module ApiAvenger
 end
 
 Faraday::Request.register_middleware(
-  api_avenger: ApiAvenger::Adapter::Faraday,
+  network_resiliency: NetworkResiliency::Adapter::Faraday,
 )

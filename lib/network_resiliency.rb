@@ -1,7 +1,7 @@
-require "api_avenger/stats"
-require "api_avenger/version"
+require "network_resiliency/stats"
+require "network_resiliency/version"
 
-module ApiAvenger
+module NetworkResiliency
   extend self
 
   def enabled?
@@ -101,14 +101,14 @@ module ApiAvenger
     end
 
     def cachekey(key)
-      [ ApiAvenger, key ].join(":")
+      [ NetworkResiliency, key ].join(":")
     end
   end
 end
 
 
-require "api_avenger/adapter/faraday"
-require "api_avenger/adapter/redis"
+require "network_resiliency/adapter/faraday"
+require "network_resiliency/adapter/redis"
 
 # ms granularity, round up, floor(1)
 #

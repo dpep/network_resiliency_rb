@@ -1,4 +1,4 @@
-describe ApiAvenger::Stats do
+describe NetworkResiliency::Stats do
   subject(:stats) { described_class.new }
 
   let(:precision) { 0.00001 }

@@ -1,6 +1,6 @@
 require "redis"
 
-module ApiAvenger
+module NetworkResiliency
   module Adapter
     module Redis
       def connect(redis_config)
@@ -11,12 +11,12 @@ module ApiAvenger
         already_connected = client.connected?
 
         # client.connect_timeout = 0.1
-        ts = -ApiAvenger.timestamp
+        ts = -NetworkResiliency.timestamp
         super
       ensure
         client.connect_timeout = old_timeout
 
-        ts += ApiAvenger.timestamp
+        ts += NetworkResiliency.timestamp
 
         note = already_connected ? " (already_connected)" : ""
 
@@ -27,13 +27,13 @@ module ApiAvenger
         puts "RedisClient.call"
 
         key = "#{id}:call"
-        ts = -ApiAvenger.timestamp
+        ts = -NetworkResiliency.timestamp
         with_timeout(1) { super }
       ensure
-        ts += ApiAvenger.timestamp
+        ts += NetworkResiliency.timestamp
         puts "call time: #{ts}"
 
-        ApiAvenger.record(self, id, ts)
+        NetworkResiliency.record(self, id, ts)
       end
 
       def id

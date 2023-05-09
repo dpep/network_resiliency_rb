@@ -1,11 +1,11 @@
-require_relative "lib/api_avenger/version"
-package = ApiAvenger
+require_relative "lib/network_resiliency/version"
+package = NetworkResiliency
 
 Gem::Specification.new do |s|
   s.authors     = ["Daniel Pepper"]
   s.description = "..."
   s.files       = `git ls-files * ':!:spec'`.split("\n")
-  s.homepage    = "https://github.com/dpep/api_avenger_rb"
+  s.homepage    = "https://github.com/dpep/network_resiliency_rb"
   s.license     = "MIT"
   s.name        = File.basename(__FILE__).split(".")[0]
   s.summary     = package.to_s

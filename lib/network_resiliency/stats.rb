@@ -1,4 +1,4 @@
-module ApiAvenger
+module NetworkResiliency
   class Stats
     attr_reader :n, :avg
 
