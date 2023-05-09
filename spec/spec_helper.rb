@@ -3,7 +3,7 @@ require "rspec"
 require "simplecov"
 
 SimpleCov.start do
-  add_filter "/spec/"
+  add_filter "spec/"
 end
 
 if ENV["CI"] == "true" || ENV["CODECOV_TOKEN"]
@@ -25,15 +25,4 @@ RSpec.configure do |config|
   end
 end
 
-# Dir["./spec/support/**/*.rb"].sort.each { |f| require f }
-
-
-class ApiSimulator
-  def call(env)
-    [ 200, {'Content-Type' => 'text/html'}, ["OK"] ]
-  end
-end
-
-Faraday.new do |conn|
-  conn.adapter :rack, ApiSimulator.new
-end
+Dir["./spec/support/**/*.rb"].sort.each { |f| require f }

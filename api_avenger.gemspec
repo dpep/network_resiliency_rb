@@ -15,6 +15,11 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency "byebug"
   s.add_development_dependency "codecov"
+  s.add_development_dependency "faraday-rack"
+  s.add_development_dependency "rack"
+  s.add_development_dependency "rack-test"
+  s.add_development_dependency "redis"
+  s.add_development_dependency "redis-client", ">= 0.10"
   s.add_development_dependency "rspec"
   s.add_development_dependency "simplecov"
 end
