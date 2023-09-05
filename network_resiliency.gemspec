@@ -15,6 +15,8 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency "byebug"
   s.add_development_dependency "codecov"
+  s.add_development_dependency "ddtrace", ">= 1"
+  s.add_development_dependency "dogstatsd-ruby", "<= 4.8.3"
   s.add_development_dependency "faraday-rack"
   s.add_development_dependency "rack"
   s.add_development_dependency "rack-test"
