@@ -1,6 +1,9 @@
-ApiAvenger
+NetworkResiliency
 ======
-...
+![Gem](https://img.shields.io/gem/dt/network_resiliency?style=plastic)
+[![codecov](https://codecov.io/gh/dpep/network_resiliency_rb/branch/main/graph/badge.svg)](https://codecov.io/gh/dpep/network_resiliency_rb)
+
+Making networks more resilient to errors.
 
 
 ```ruby
@@ -21,6 +24,8 @@ Yes please  :)
 1. Create a Pull Request
 
 
+
 ----
-![Gem](https://img.shields.io/gem/dt/network_resiliency?style=plastic)
-[![codecov](https://codecov.io/gh/dpep/network_resiliency_rb/branch/main/graph/badge.svg)](https://codecov.io/gh/dpep/network_resiliency_rb)
+### Inspired by
+
+https://github.com/lostisland/faraday-retry/blob/main/lib/faraday/retry/middleware.rb
