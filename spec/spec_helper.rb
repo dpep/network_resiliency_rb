@@ -1,4 +1,5 @@
 require "byebug"
+require "datadog/statsd"
 require "rspec"
 require "simplecov"
 
@@ -22,6 +23,12 @@ RSpec.configure do |config|
   config.mock_with :rspec do |mocks|
     # verify existence of stubbed methods
     mocks.verify_partial_doubles = true
+  end
+
+  config.before do
+    NetworkResiliency.reset
+
+    NetworkResiliency.statsd = instance_double(Datadog::Statsd)
   end
 end
 
