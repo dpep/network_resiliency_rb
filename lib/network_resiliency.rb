@@ -19,7 +19,7 @@ module NetworkResiliency
   end
 
   def enabled=(enabled)
-    unless [ nil, true, false ].include?(enabled) || enabled.is_a?(Proc)
+    unless [ true, false ].include?(enabled) || enabled.is_a?(Proc)
       raise ArgumentError
     end
 
