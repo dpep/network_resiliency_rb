@@ -73,5 +73,27 @@ describe NetworkResiliency::Adapter::HTTP do
         }.to raise_error(Net::OpenTimeout)
       end
     end
+
+    context "when NetworkResiliency is disabled" do
+      before { NetworkResiliency.enabled = false }
+
+      it "does not call datadog" do
+        expect(NetworkResiliency.statsd).not_to receive(:distribution)
+
+        http.connect
+      end
+
+      context "when server connection times out" do
+        let(:uri) { URI("http://timeout.com") }
+
+        it "does not log timeouts" do
+          expect(NetworkResiliency.statsd).not_to receive(:distribution)
+
+          expect {
+            http.connect
+          }.to raise_error(Net::OpenTimeout)
+        end
+      end
+    end
   end
 end
