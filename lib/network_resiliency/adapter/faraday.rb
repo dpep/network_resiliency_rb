@@ -57,3 +57,5 @@ end
 Faraday::Request.register_middleware(
   network_resiliency: NetworkResiliency::Adapter::Faraday,
 )
+
+# https://github.com/lostisland/faraday_middleware/blob/main/lib/faraday_middleware.rb
