@@ -1,4 +1,4 @@
-# require "socket"
+require "socket"
 
 module Helpers
   module MockServer
