@@ -29,3 +29,5 @@ Yes please  :)
 ### Inspired by
 
 https://github.com/lostisland/faraday-retry/blob/main/lib/faraday/retry/middleware.rb
+
+https://github.com/ankane/the-ultimate-guide-to-ruby-timeouts
