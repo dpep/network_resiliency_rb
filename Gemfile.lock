@@ -2,7 +2,6 @@ PATH
   remote: .
   specs:
     network_resiliency (0.0.2)
-      faraday
 
 GEM
   remote: https://rubygems.org/
@@ -71,6 +70,7 @@ DEPENDENCIES
   codecov
   ddtrace (>= 1)
   dogstatsd-ruby (<= 4.8.3)
+  faraday
   faraday-rack
   network_resiliency!
   rack
