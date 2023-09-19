@@ -32,4 +32,9 @@ RSpec.configure do |config|
   end
 end
 
-Dir["./spec/support/**/*.rb"].sort.each { |f| require f }
+Dir["./spec/support/**/*.rb"].sort.each do |f|
+  puts "!!!! rspec support load: #{f}"
+  require f
+end
+
+# Dir["./spec/support/**/*.rb"].sort.each { |f| require f }
