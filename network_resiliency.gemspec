@@ -12,7 +12,6 @@ Gem::Specification.new do |s|
   s.version     = package.const_get "VERSION"
 
   s.add_development_dependency "byebug"
-  s.add_development_dependency "codecov"
   s.add_development_dependency "ddtrace", ">= 1"
   s.add_development_dependency "dogstatsd-ruby", "<= 4.8.3"
   s.add_development_dependency "faraday"
