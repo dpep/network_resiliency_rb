@@ -5,6 +5,8 @@ NetworkResiliency
 
 Making networks more resilient to errors.
 
+Resiliency: the ability to recover from adversity or adjust to change.
+
 
 ```ruby
 require "network_resiliency"
