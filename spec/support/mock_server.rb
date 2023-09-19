@@ -30,6 +30,8 @@ module Helpers
 end
 
 
+puts "!!!  Net::HTTP::VERSION: #{Net::HTTP::VERSION}"
+
 RSpec.configure do |config|
   config.include Helpers::MockServer
 
