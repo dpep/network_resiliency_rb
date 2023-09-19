@@ -1,8 +1,11 @@
+require "net/http"
 require "socket"
 
 module Helpers
   module MockServer
-    def mock_server
+    def mock_server(host, *args)
+      raise Net::OpenTimeout if host =~ /timeout/
+
       client_socket, server_socket = Socket.pair(:UNIX, :STREAM, 0)
 
       allow(client_socket).to receive(:setsockopt)
@@ -30,20 +33,11 @@ module Helpers
 end
 
 
-puts "!!!  Net::HTTP::VERSION: #{Net::HTTP::VERSION}"
-
 RSpec.configure do |config|
   config.include Helpers::MockServer
 
   config.before do
-    allow(Socket).to receive(:tcp) do |host, *args|
-      raise Net::OpenTimeout if host =~ /timeout/
-
-      mock_server
-    end
-
-    # allow(TCPSocket).to receive(:open).and_wrap_original do |original_method, *args|
-    #   client_socket
-    # end
+    allow(Socket).to receive(:tcp, &method(:mock_server))
+    allow(TCPSocket).to receive(:open, &method(:mock_server))
   end
 end
