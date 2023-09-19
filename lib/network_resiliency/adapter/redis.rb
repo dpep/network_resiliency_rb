@@ -59,5 +59,5 @@ module NetworkResiliency
   end
 end
 
-# RedisClient.register(RedisAvenger)
-# Redis.new(middlewares: [RedisAvenger])
+# RedisClient.register(NetworkResiliency::Adapter::Redis)
+# Redis.new(middlewares: [NetworkResiliency::Adapter::Redis])
