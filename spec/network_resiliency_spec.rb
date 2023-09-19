@@ -41,4 +41,38 @@ describe NetworkResiliency do
       end
     end
   end
+
+  describe ".enable!" do
+    before { NetworkResiliency.enabled = false }
+
+    it "enables" do
+      NetworkResiliency.enable!
+      expect(NetworkResiliency.enabled?).to be true
+    end
+
+    it "resets after the given block" do
+      NetworkResiliency.enable! do
+        expect(NetworkResiliency.enabled?).to be true
+      end
+
+      expect(NetworkResiliency.enabled?).to be false
+    end
+  end
+
+  describe ".disable!" do
+    before { NetworkResiliency.enabled = true }
+
+    it "disables" do
+      NetworkResiliency.disable!
+      expect(NetworkResiliency.enabled?).to be false
+    end
+
+    it "resets after the given block" do
+      NetworkResiliency.disable! do
+        expect(NetworkResiliency.enabled?).to be false
+      end
+
+      expect(NetworkResiliency.enabled?).to be true
+    end
+  end
 end

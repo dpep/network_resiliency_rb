@@ -26,6 +26,24 @@ module NetworkResiliency
     @enabled = enabled
   end
 
+  def enable!
+    original = @enabled
+    @enabled = true
+
+    yield if block_given?
+  ensure
+    @enabled = original if block_given?
+  end
+
+  def disable!
+    original = @enabled
+    @enabled = false
+
+    yield if block_given?
+  ensure
+    @enabled = original if block_given?
+  end
+
   def timestamp
     # milliseconds
     Process.clock_gettime(Process::CLOCK_MONOTONIC) * 1_000
