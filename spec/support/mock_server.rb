@@ -34,9 +34,9 @@ end
 
 
 RSpec.configure do |config|
-  config.include Helpers::MockServer
+  config.include Helpers::MockServer, :mock_socket
 
-  config.before do
+  config.before(mock_socket: true) do
     allow(Socket).to receive(:tcp, &method(:mock_server))
     allow(TCPSocket).to receive(:open, &method(:mock_server))
   end

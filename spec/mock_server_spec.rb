@@ -1,4 +1,4 @@
-describe "MockServer" do
+describe "MockServer", :mock_socket do
   let(:uri) { URI("http://example.com/") }
 
   context "with naked get" do

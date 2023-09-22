@@ -1,4 +1,4 @@
-describe NetworkResiliency::Adapter::HTTP do
+describe NetworkResiliency::Adapter::HTTP, :mock_socket do
   let(:http) { Net::HTTP.new(uri.host) }
   let(:uri) { URI('http://example.com') }
 
