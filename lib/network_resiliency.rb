@@ -12,10 +12,10 @@ module NetworkResiliency
 
   attr_accessor :statsd
 
-  def enabled?
+  def enabled?(adapter)
     return true if @enabled.nil?
 
-    @enabled.is_a?(Proc) ? @enabled.call : @enabled
+    @enabled.is_a?(Proc) ? @enabled.call(adapter) : @enabled
   end
 
   def enabled=(enabled)

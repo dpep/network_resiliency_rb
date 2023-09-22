@@ -15,7 +15,7 @@ module NetworkResiliency
 
       module Instrumentation
         def connect
-          return super unless NetworkResiliency.enabled?
+          return super unless NetworkResiliency.enabled?(:http)
 
           begin
             ts = -NetworkResiliency.timestamp

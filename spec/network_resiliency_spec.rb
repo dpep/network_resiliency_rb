@@ -13,7 +13,7 @@ describe NetworkResiliency do
   end
 
   describe ".enabled?" do
-    subject { NetworkResiliency.enabled? }
+    subject { NetworkResiliency.enabled?(:http) }
 
     it "defaults to true" do
       is_expected.to be true
@@ -45,34 +45,42 @@ describe NetworkResiliency do
   describe ".enable!" do
     before { NetworkResiliency.enabled = false }
 
+    def is_expected
+      expect(NetworkResiliency.enabled?(:http))
+    end
+
     it "enables" do
       NetworkResiliency.enable!
-      expect(NetworkResiliency.enabled?).to be true
+      is_expected.to be true
     end
 
     it "resets after the given block" do
       NetworkResiliency.enable! do
-        expect(NetworkResiliency.enabled?).to be true
+        is_expected.to be true
       end
 
-      expect(NetworkResiliency.enabled?).to be false
+      is_expected.to be false
     end
   end
 
   describe ".disable!" do
     before { NetworkResiliency.enabled = true }
 
+    def is_expected
+      expect(NetworkResiliency.enabled?(:http))
+    end
+
     it "disables" do
       NetworkResiliency.disable!
-      expect(NetworkResiliency.enabled?).to be false
+      is_expected.to be false
     end
 
     it "resets after the given block" do
       NetworkResiliency.disable! do
-        expect(NetworkResiliency.enabled?).to be false
+        is_expected.to be false
       end
 
-      expect(NetworkResiliency.enabled?).to be true
+      is_expected.to be true
     end
   end
 end
