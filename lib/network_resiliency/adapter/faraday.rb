@@ -3,8 +3,20 @@ require "faraday"
 module NetworkResiliency
   module Adapter
     class Faraday < ::Faraday::Middleware
+
+      def self.patched?(conn)
+        conn.builder.handlers.include?(self)
+      end
+
       def call(env)
-        puts "NetworkResiliency called: #{env.url}"
+        return super unless NetworkResiliency.enabled?(:faraday)
+
+        NetworkResiliency.disable! { _call(env) }
+      end
+
+      private
+
+      def _call(env)
 # env.options.timeout = 0.001
 # open_timeout
 
@@ -12,44 +24,54 @@ module NetworkResiliency
         # predict time
         # get dynamic timeout
 
-        if NetworkResiliency.enabled?
-          # temp update timeout
-          # with_timeout(...) { super }
-        else
-          super
-        end
-      rescue ::Faraday::Error => e
-        # note exception for ensure block
+        # temp update timeout
+        # with_timeout(...) { super }
+
+        ts = -NetworkResiliency.timestamp
+
+        # super
+        app.call(env)
+      rescue ::Faraday::ConnectionFailed, ::Faraday::TimeoutError => e
+        # capture error
+        raise
       ensure
-        # record time taken
+        ts += NetworkResiliency.timestamp
 
-        # reraise if applicable
-        raise e if e
+        NetworkResiliency.statsd&.distribution(
+          "network_resiliency.connect",
+          ts,
+          tags: {
+            adapter: "faraday",
+            destination: env.url.host,
+            error: e&.wrapped_exception.class,
+            # timeout: env.options.open_timeout || env.options.timeout,
+          }.compact,
+        )
       end
 
-      def normalized_id(env)
-        env.url
-      end
+      # def normalized_id(env)
+      #   env.url
+      # end
 
-      def with_timeout(env, timeout)
-        old_timeouts = [
-          env.options.timeout,
-          env.options.open_timeout,
-          env.options.read_timeout,
-          env.options.write_timeout,
-        ]
+      # def with_timeout(env, timeout)
+      #   old_timeouts = [
+      #     env.options.timeout,
+      #     env.options.open_timeout,
+      #     env.options.read_timeout,
+      #     env.options.write_timeout,
+      #   ]
 
-        env.options.timeout = [
-          env.options.timeout,
-          timeout,
-        ].compact.min
+      #   env.options.timeout = [
+      #     env.options.timeout,
+      #     timeout,
+      #   ].compact.min
 
-        # env.options.open_timeout = [ env.options.open_timeout, timeout ].compact.min
-        # ...
-      ensure
-        env.options.timeout = old_timeouts[0]
-        # ...
-      end
+      #   # env.options.open_timeout = [ env.options.open_timeout, timeout ].compact.min
+      #   # ...
+      # ensure
+      #   env.options.timeout = old_timeouts[0]
+      #   # ...
+      # end
     end
   end
 end
