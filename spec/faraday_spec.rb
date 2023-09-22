@@ -1,16 +1,10 @@
 describe NetworkResiliency::Adapter::Faraday, :mock_socket do
   let(:faraday) do
     Faraday.new(url: uri.to_s) do |f|
-      f.request :network_resiliency
+      f.adapter :network_resiliency
     end
   end
   let(:uri) { URI("http://example.com") }
-
-  describe ".patch" do
-    subject { described_class.patched?(faraday) }
-
-    it { is_expected.to be true }
-  end
 
   describe ".connect" do
     subject(:response) { faraday.get.body }
@@ -19,7 +13,7 @@ describe NetworkResiliency::Adapter::Faraday, :mock_socket do
       expect(NetworkResiliency.statsd).to receive(:distribution).with(
         /connect/,
         Numeric,
-        tags: include(adapter: "faraday"),
+        tags: include(adapter: "http"),
       )
 
       response
@@ -47,12 +41,6 @@ describe NetworkResiliency::Adapter::Faraday, :mock_socket do
       expect(NetworkResiliency.statsd).to receive(:distribution)
 
       expect(response).to eq "OK"
-    end
-
-    it "does not log http adapter also" do
-      expect(NetworkResiliency.statsd).to receive(:distribution).once
-
-      response
     end
 
     context "when server connection times out" do
