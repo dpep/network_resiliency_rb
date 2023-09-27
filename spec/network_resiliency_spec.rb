@@ -1,4 +1,8 @@
 describe NetworkResiliency do
+  def expect_enabled
+    expect(NetworkResiliency.enabled?(:http))
+  end
+
   describe ".timestamp" do
     before do
       allow(Process).to receive(:clock_gettime).and_return(1, 2)
@@ -45,42 +49,34 @@ describe NetworkResiliency do
   describe ".enable!" do
     before { NetworkResiliency.enabled = false }
 
-    def is_expected
-      expect(NetworkResiliency.enabled?(:http))
-    end
-
     it "enables" do
       NetworkResiliency.enable!
-      is_expected.to be true
+      expect_enabled.to be true
     end
 
     it "resets after the given block" do
       NetworkResiliency.enable! do
-        is_expected.to be true
+        expect_enabled.to be true
       end
 
-      is_expected.to be false
+      expect_enabled.to be false
     end
   end
 
   describe ".disable!" do
     before { NetworkResiliency.enabled = true }
 
-    def is_expected
-      expect(NetworkResiliency.enabled?(:http))
-    end
-
     it "disables" do
       NetworkResiliency.disable!
-      is_expected.to be false
+      expect_enabled.to be false
     end
 
     it "resets after the given block" do
       NetworkResiliency.disable! do
-        is_expected.to be false
+        expect_enabled.to be false
       end
 
-      is_expected.to be true
+      expect_enabled.to be true
     end
   end
 
@@ -90,13 +86,13 @@ describe NetworkResiliency do
     end
 
     it "configures NetworkResiliency" do
-      expect(NetworkResiliency.enabled?(:http)).to be true
+      expect_enabled.to be true
 
       NetworkResiliency.configure do |conf|
         conf.enabled = false
       end
 
-      expect(NetworkResiliency.enabled?(:http)).to be false
+      expect_enabled.to be false
     end
   end
 end
