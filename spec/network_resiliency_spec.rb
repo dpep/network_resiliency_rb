@@ -83,4 +83,20 @@ describe NetworkResiliency do
       is_expected.to be true
     end
   end
+
+  describe ".configure" do
+    it "yields a config object" do
+      expect {|b| NetworkResiliency.configure(&b) }.to yield_control
+    end
+
+    it "configures NetworkResiliency" do
+      expect(NetworkResiliency.enabled?(:http)).to be true
+
+      NetworkResiliency.configure do |conf|
+        conf.enabled = false
+      end
+
+      expect(NetworkResiliency.enabled?(:http)).to be false
+    end
+  end
 end

@@ -11,6 +11,10 @@ module NetworkResiliency
 
   attr_accessor :statsd
 
+  def configure
+    yield self
+  end
+
   def enabled?(adapter)
     return true if @enabled.nil?
 
