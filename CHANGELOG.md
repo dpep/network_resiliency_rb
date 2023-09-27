@@ -1,3 +1,19 @@
+###  v0.1.0  (2023-09-26)
+- rework faraday adapter
+- faraday
+- adapter scoped enabled
+- scope rspec helper
+- adapter tag
+- enable disable block mode
+- drop ruby 2.7 support
+- resiliency
+- pointer
+- code coverage upgrade
+- requirements
+- http adapter
+- mock http server
+- add ddtrace to dev
+
 ###  v0.0.2  (2023-05-09)
 - rename to Network Resiliency
 - fix sample variance
