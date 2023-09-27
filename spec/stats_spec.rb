@@ -1,3 +1,5 @@
+require "network_resiliency/stats"
+
 describe NetworkResiliency::Stats do
   subject(:stats) { described_class.new }
 
