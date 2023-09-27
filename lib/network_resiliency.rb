@@ -1,4 +1,3 @@
-require "network_resiliency/stats"
 require "network_resiliency/version"
 
 module NetworkResiliency
