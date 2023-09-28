@@ -1,3 +1,9 @@
+###  v0.1.1  (2023-09-27)
+- prevent double patching
+- filter ip addresses
+- simplify
+- configure
+
 ###  v0.1.0  (2023-09-26)
 - rework faraday adapter
 - faraday
