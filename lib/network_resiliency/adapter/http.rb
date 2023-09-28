@@ -27,14 +27,12 @@ module NetworkResiliency
           ensure
             ts += NetworkResiliency.timestamp
 
-            NetworkResiliency.statsd&.distribution(
-              "network_resiliency.connect",
-              ts,
-              tags: {
-                adapter: "http",
-                destination: address,
-                error: e&.class,
-              }.compact,
+            NetworkResiliency.record(
+              adapter: "http",
+              action: "connect",
+              destination: address,
+              error: e&.class,
+              duration: ts,
             )
           end
         end

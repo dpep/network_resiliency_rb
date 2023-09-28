@@ -95,4 +95,47 @@ describe NetworkResiliency do
       expect_enabled.to be false
     end
   end
+
+  describe ".record" do
+    subject do
+      NetworkResiliency.record(
+        adapter: "adapter",
+        action: action,
+        destination: host,
+        duration: duration,
+        error: error,
+      )
+
+      NetworkResiliency.statsd
+    end
+
+    let(:action) { "connect" }
+    let(:error) { Net::OpenTimeout }
+    let(:duration) { 10 }
+    let(:host) { "example.com" }
+
+    before do
+      allow(NetworkResiliency.statsd).to receive(:distribution)
+    end
+
+    it "calls Datadog" do
+      is_expected.to have_received(:distribution)
+    end
+
+    it "captures metric info" do
+      is_expected.to have_received(:distribution).with(
+        "network_resiliency.#{action}",
+        duration,
+        tags: include(destination: host, error: error),
+      )
+    end
+
+    context "when host is a raw IP address" do
+      let(:host) { "127.0.0.1" }
+
+      it "does not call Datadog" do
+        is_expected.not_to have_received(:distribution)
+      end
+    end
+  end
 end

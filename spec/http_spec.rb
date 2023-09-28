@@ -95,5 +95,15 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
         end
       end
     end
+
+    context "when host is a raw IP address" do
+      let(:http) { Net::HTTP.new("127.0.0.1") }
+
+      it "does not call datadog" do
+        expect(NetworkResiliency.statsd).not_to receive(:distribution)
+
+        http.connect
+      end
+    end
   end
 end

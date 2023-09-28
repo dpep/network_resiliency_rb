@@ -52,6 +52,25 @@ module NetworkResiliency
     Process.clock_gettime(Process::CLOCK_MONOTONIC) * 1_000
   end
 
+  # private
+
+  IP_ADDRESS_REGEX = Regexp.new(/\d{1,3}(\.\d{1,3}){3}/)
+
+  def record(adapter:, action:, destination:, duration:, error: nil)
+    # filter raw IP addresses
+    return if IP_ADDRESS_REGEX.match?(destination)
+
+    NetworkResiliency.statsd&.distribution(
+      "network_resiliency.#{action}",
+      duration,
+      tags: {
+        adapter: adapter,
+        destination: destination,
+        error: error,
+      }.compact,
+    )
+  end
+
   def reset
     @enabled = nil
   end
