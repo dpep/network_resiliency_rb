@@ -18,7 +18,9 @@ module NetworkResiliency
   def enabled?(adapter)
     return true if @enabled.nil?
 
-    @enabled.is_a?(Proc) ? @enabled.call(adapter) : @enabled
+    @enabled.is_a?(Proc) ? !!@enabled.call(adapter) : @enabled
+  rescue
+    false
   end
 
   def enabled=(enabled)

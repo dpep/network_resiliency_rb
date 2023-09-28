@@ -30,11 +30,31 @@ describe NetworkResiliency do
     end
 
     context "when set to a method" do
+      let(:callback) { proc { false } }
+
       before do
-        NetworkResiliency.enabled = proc { true }
+        NetworkResiliency.enabled = callback
       end
 
-      it { is_expected.to be true }
+      it "uses value returned by method" do
+        is_expected.to be false
+      end
+
+      context "when method explodes" do
+        let(:callback) { proc { raise } }
+
+        it "gracefully fails closed" do
+          is_expected.to be false
+        end
+      end
+
+      context "when method returns non-boolean value" do
+        let(:callback) { proc { nil } }
+
+        it "is converted to a boolean" do
+          is_expected.to be false
+        end
+      end
     end
 
     context "when given an invalid argument" do
