@@ -77,5 +77,25 @@ describe NetworkResiliency::Adapter::Faraday, :mock_socket do
         end
       end
     end
+
+    it "patches the Net::HTTP instance" do
+      expect(NetworkResiliency::Adapter::HTTP).to receive(:patch) do |obj|
+        expect(obj).to be_a Net::HTTP
+      end
+
+      response
+    end
+
+    context "when Net::HTTP is already patched" do
+      before do
+        allow(NetworkResiliency::Adapter::HTTP).to receive(:patched?).and_return(true)
+      end
+
+      it "does not double patch" do
+        expect(NetworkResiliency::Adapter::HTTP).not_to receive(:patch)
+
+        response
+      end
+    end
   end
 end
