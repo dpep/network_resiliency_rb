@@ -4,10 +4,6 @@ describe NetworkResiliency do
   end
 
   describe ".timestamp" do
-    before do
-      allow(Process).to receive(:clock_gettime).and_return(1, 2)
-    end
-
     it "converts to milliseconds" do
       ts = -NetworkResiliency.timestamp
       ts += NetworkResiliency.timestamp

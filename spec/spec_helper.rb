@@ -30,6 +30,9 @@ RSpec.configure do |config|
 
     NetworkResiliency.statsd = instance_double(Datadog::Statsd)
     allow(NetworkResiliency.statsd).to receive(:distribution)
+
+    # since Timecop doesn't work with Process.clock_gettime
+    allow(Process).to receive(:clock_gettime).and_return(*(1..10))
   end
 end
 
