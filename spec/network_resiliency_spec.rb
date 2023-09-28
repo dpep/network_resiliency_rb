@@ -114,10 +114,6 @@ describe NetworkResiliency do
     let(:duration) { 10 }
     let(:host) { "example.com" }
 
-    before do
-      allow(NetworkResiliency.statsd).to receive(:distribution)
-    end
-
     it "calls Datadog" do
       is_expected.to have_received(:distribution)
     end

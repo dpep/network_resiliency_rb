@@ -7,38 +7,37 @@ describe NetworkResiliency::Adapter::Faraday, :mock_socket do
   let(:uri) { URI("http://example.com") }
 
   describe ".connect" do
-    subject(:response) { faraday.get.body }
+    subject do
+      response rescue Faraday::ConnectionFailed
+      NetworkResiliency.statsd
+    end
+
+    let(:response) { faraday.get.body }
 
     it "logs connection" do
-      expect(NetworkResiliency.statsd).to receive(:distribution).with(
+      is_expected.to have_received(:distribution).with(
         /connect/,
         Numeric,
         tags: include(adapter: "http"),
       )
-
-      response
     end
 
     it "logs duration" do
-      expect(NetworkResiliency.statsd).to receive(:distribution) do |_, duration, _|
+      is_expected.to have_received(:distribution) do |_, duration, _|
         expect(duration).to be > 0
       end
-
-      response
     end
 
     it "tags the destination host" do
-      expect(NetworkResiliency.statsd).to receive(:distribution).with(
+      is_expected.to have_received(:distribution).with(
         String,
         Numeric,
         tags: include(destination: uri.host),
       )
-
-      response
     end
 
     it "completes request" do
-      expect(NetworkResiliency.statsd).to receive(:distribution)
+      is_expected.to have_received(:distribution)
 
       expect(response).to eq "OK"
     end
@@ -46,16 +45,16 @@ describe NetworkResiliency::Adapter::Faraday, :mock_socket do
     context "when server connection times out" do
       let(:uri) { URI("http://timeout.com") }
 
-      it "logs timeouts" do
-        expect(NetworkResiliency.statsd).to receive(:distribution).with(
+      it "raises an error" do
+        expect { response }.to raise_error(Faraday::ConnectionFailed)
+      end
+
+      it "logs timeout" do
+        is_expected.to have_received(:distribution).with(
           String,
           Numeric,
           tags: include(error: Net::OpenTimeout),
         )
-
-        expect {
-          faraday.get
-        }.to raise_error(Faraday::ConnectionFailed)
       end
     end
 
@@ -63,20 +62,18 @@ describe NetworkResiliency::Adapter::Faraday, :mock_socket do
       before { NetworkResiliency.enabled = false }
 
       it "does not call datadog" do
-        expect(NetworkResiliency.statsd).not_to receive(:distribution)
-
-        faraday.get
+        is_expected.not_to have_received(:distribution)
       end
 
       context "when server connection times out" do
         let(:uri) { URI("http://timeout.com") }
 
-        it "does not log timeouts" do
-          expect(NetworkResiliency.statsd).not_to receive(:distribution)
+        it "raises an error" do
+          expect { response }.to raise_error(Faraday::ConnectionFailed)
+        end
 
-          expect {
-            faraday.get
-          }.to raise_error(Faraday::ConnectionFailed)
+        it "does not log timeout" do
+          is_expected.not_to have_received(:distribution)
         end
       end
     end

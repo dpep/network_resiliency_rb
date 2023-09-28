@@ -29,6 +29,7 @@ RSpec.configure do |config|
     NetworkResiliency.reset
 
     NetworkResiliency.statsd = instance_double(Datadog::Statsd)
+    allow(NetworkResiliency.statsd).to receive(:distribution)
   end
 end
 

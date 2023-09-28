@@ -19,79 +19,76 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
   end
 
   describe ".connect" do
+    subject do
+      http.connect rescue Net::OpenTimeout
+
+      NetworkResiliency.statsd
+    end
+
     before do
       described_class.patch(http)
     end
 
     it "logs connection" do
-      expect(NetworkResiliency.statsd).to receive(:distribution).with(
+      is_expected.to have_received(:distribution).with(
         /connect/,
         Numeric,
         anything,
       )
-
-      http.connect
     end
 
     it "logs duration" do
-      expect(NetworkResiliency.statsd).to receive(:distribution) do |_, duration, _|
+      is_expected.to have_received(:distribution) do |_, duration, _|
         expect(duration).to be > 0
       end
-
-      http.connect
     end
 
     it "tags the destination host" do
-      expect(NetworkResiliency.statsd).to receive(:distribution).with(
+      is_expected.to have_received(:distribution).with(
         String,
         Numeric,
         tags: include(destination: uri.host),
       )
-
-      http.connect
     end
 
     it "completes request" do
-      expect(NetworkResiliency.statsd).to receive(:distribution)
-
       res = http.get "/"
       expect(res.body).to eq "OK"
+      expect(NetworkResiliency.statsd).to have_received(:distribution)
     end
 
     context "when server connection times out" do
       let(:uri) { URI("http://timeout.com") }
 
-      it "logs timeouts" do
-        expect(NetworkResiliency.statsd).to receive(:distribution).with(
+      it "raises an error" do
+        expect { http.connect }.to raise_error(Net::OpenTimeout)
+      end
+
+      it "logs timeout" do
+        is_expected.to have_received(:distribution).with(
           String,
           Numeric,
           tags: include(error: Net::OpenTimeout),
         )
-
-        expect {
-          http.connect
-        }.to raise_error(Net::OpenTimeout)
       end
     end
 
     context "when NetworkResiliency is disabled" do
-      before { NetworkResiliency.enabled = false }
+      before { NetworkResiliency.disable! }
 
       it "does not call datadog" do
-        expect(NetworkResiliency.statsd).not_to receive(:distribution)
-
-        http.connect
+        is_expected.not_to have_received(:distribution)
       end
 
       context "when server connection times out" do
         let(:uri) { URI("http://timeout.com") }
 
-        it "does not log timeouts" do
-          expect(NetworkResiliency.statsd).not_to receive(:distribution)
+        it "raises an error" do
+          expect { http.connect }.to raise_error(Net::OpenTimeout)
+        end
 
-          expect {
-            http.connect
-          }.to raise_error(Net::OpenTimeout)
+        it "does not log timeout" do
+          is_expected.not_to have_received(:distribution)
         end
       end
     end
@@ -100,9 +97,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       let(:http) { Net::HTTP.new("127.0.0.1") }
 
       it "does not call datadog" do
-        expect(NetworkResiliency.statsd).not_to receive(:distribution)
-
-        http.connect
+        is_expected.not_to have_received(:distribution)
       end
     end
   end
