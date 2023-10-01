@@ -3,61 +3,73 @@ require "redis"
 module NetworkResiliency
   module Adapter
     module Redis
-      def connect(redis_config)
-        puts "RedisClient.connect(#{client.connect_timeout})"
+      extend self
 
-        old_timeout = client.connect_timeout
+      def patch(instance = nil)
+        return if patched?(instance)
 
-        already_connected = client.connected?
+        if instance
+          unless instance.is_a?(::Redis)
+            raise ArgumentError, "expected Redis instance, found: #{instance}"
+          end
 
-        # client.connect_timeout = 0.1
-        ts = -NetworkResiliency.timestamp
-        super
-      ensure
-        client.connect_timeout = old_timeout
+          client = instance.instance_variable_get(:@client)
 
-        ts += NetworkResiliency.timestamp
+          unless client.is_a?(::Redis::Client)
+            raise ArgumentError, "unsupported Redis client: #{client}"
+          end
 
-        note = already_connected ? " (already_connected)" : ""
-
-        puts "connect time: #{ts}#{note}"
+          client.singleton_class.prepend(Instrumentation)
+        else
+          ::Redis::Client.prepend(Instrumentation)
+        end
       end
 
-      def call(command, redis_config)
-        puts "RedisClient.call"
+      def patched?(instance = nil)
+        if instance
+          client = instance.instance_variable_get(:@client)
 
-        key = "#{id}:call"
-        ts = -NetworkResiliency.timestamp
-        with_timeout(1) { super }
-      ensure
-        ts += NetworkResiliency.timestamp
-        puts "call time: #{ts}"
-
-        NetworkResiliency.record(self, id, ts)
+          client && client.singleton_class.ancestors.include?(Instrumentation)
+        else
+          ::Redis::Client.ancestors.include?(Instrumentation)
+        end
       end
 
-      def id
-        "redis:#{client.host}"
-      end
+      module Instrumentation
+        # def initialize(...)
+        #   super
 
-      def with_timeout(timeout)
-        old_timeouts = [
-          client.connect_timeout,
-          client.read_timeout,
-          client.write_timeout,
-        ]
+        #   @network_resiliency_attempts = options[:reconnect_attempts]
+        #   options[:reconnect_attempts] = 0
+        # end
 
-        client.connect_timeout = timeout
-        client.read_timeout = timeout
-        client.write_timeout = timeout
+        def establish_connection
+          return super unless NetworkResiliency.enabled?(:redis)
 
-        yield
-      ensure
-        client.connect_timeout, client.read_timeout, client.write_timeout = *old_timeouts
+          begin
+            ts = -NetworkResiliency.timestamp
+
+            super
+          rescue ::Redis::CannotConnectError => e
+            # capture error
+            raise
+          ensure
+            ts += NetworkResiliency.timestamp
+
+            # grab underlying exception within Redis wrapper
+            error = e ? e.cause.class : nil
+
+            NetworkResiliency.record(
+              adapter: "redis",
+              action: "connect",
+              destination: host,
+              error: error,
+              duration: ts,
+            )
+          end
+        end
       end
     end
   end
 end
 
-# RedisClient.register(NetworkResiliency::Adapter::Redis)
-# Redis.new(middlewares: [NetworkResiliency::Adapter::Redis])
