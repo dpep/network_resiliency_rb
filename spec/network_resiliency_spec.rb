@@ -58,6 +58,12 @@ describe NetworkResiliency do
         NetworkResiliency::Adapter::Redis.patched?(redis)
       ).to be true
     end
+
+    it "catches bogus input" do
+      expect {
+        NetworkResiliency.patch(:foo)
+      }.to raise_error(NotImplementedError)
+    end
   end
 
   describe ".enabled?" do
