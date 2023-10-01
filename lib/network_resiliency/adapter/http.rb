@@ -6,6 +6,8 @@ module NetworkResiliency
       extend self
 
       def patch(instance = nil)
+        return if patched?(instance)
+
         (instance&.singleton_class || Net::HTTP).prepend(Instrumentation)
       end
 

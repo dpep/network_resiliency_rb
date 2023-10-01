@@ -16,6 +16,21 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
     it "has not patched globally" do
       expect(described_class.patched?).to be false
     end
+
+    it "patches globally" do
+      stub_const("Net::HTTP", Class.new)
+
+      described_class.patch
+
+      described_class.patched?
+    end
+
+    it "does not double patch" do
+      expect(http.singleton_class).to receive(:prepend).once.and_call_original
+
+      described_class.patch(http)
+      described_class.patch(http)
+    end
   end
 
   describe ".connect" do
