@@ -18,7 +18,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
     end
 
     it "patches globally" do
-      stub_const("Net::HTTP", Class.new)
+      stub_const("Net::HTTP", Class.new(Net::HTTP))
 
       described_class.patch
 
