@@ -12,6 +12,54 @@ describe NetworkResiliency do
     end
   end
 
+  describe ".patch" do
+    let(:http) { Net::HTTP.new("example.com") }
+    let(:redis) { Redis.new }
+
+    before do
+      stub_const("Net::HTTP", Class.new(Net::HTTP))
+      stub_const("Redis::Client", Class.new(Redis::Client))
+    end
+
+    context "with HTTP" do
+      subject { NetworkResiliency::Adapter::HTTP.patched?(http) }
+
+      it { is_expected.to be false }
+
+      it "patches HTTP" do
+        described_class.patch(:http)
+
+        is_expected.to be true
+      end
+    end
+
+    context "with Redis" do
+      subject { NetworkResiliency::Adapter::Redis.patched?(redis) }
+
+      it { is_expected.to be false }
+
+      it "patches Redis" do
+        described_class.patch(:redis)
+
+        is_expected.to be true
+      end
+    end
+
+    it "can patch multiple adapters" do
+      described_class.configure do |conf|
+        conf.patch(:http, :redis)
+      end
+
+      expect(
+        NetworkResiliency::Adapter::HTTP.patched?(http)
+      ).to be true
+
+      expect(
+        NetworkResiliency::Adapter::Redis.patched?(redis)
+      ).to be true
+    end
+  end
+
   describe ".enabled?" do
     subject { NetworkResiliency.enabled?(:http) }
 

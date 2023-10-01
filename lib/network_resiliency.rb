@@ -15,6 +15,19 @@ module NetworkResiliency
     yield self
   end
 
+  def patch(*adapters)
+    adapters.each do |adapter|
+      case adapter
+      when :http
+        Adapter::HTTP.patch
+      when :redis
+        Adapter::Redis.patch
+      else
+        raise NotImplementedError
+      end
+    end
+  end
+
   def enabled?(adapter)
     return true if @enabled.nil?
 
