@@ -1,3 +1,9 @@
+###  v0.2.0  (2023-10-01)
+- high level patch
+- redis adapter
+- mock redis
+- freeze time in specs
+
 ###  v0.1.1  (2023-09-27)
 - prevent double patching
 - filter ip addresses
