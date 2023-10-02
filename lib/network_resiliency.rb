@@ -31,7 +31,13 @@ module NetworkResiliency
   def enabled?(adapter)
     return true if @enabled.nil?
 
-    @enabled.is_a?(Proc) ? !!@enabled.call(adapter) : @enabled
+    if @enabled.is_a?(Proc)
+      # prevent recursive calls
+      enabled = @enabled
+      disable! { !!enabled.call(adapter) }
+    else
+      @enabled
+    end
   rescue
     false
   end

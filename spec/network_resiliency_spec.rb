@@ -105,6 +105,18 @@ describe NetworkResiliency do
           is_expected.to be false
         end
       end
+
+      context "when method recurses" do
+        # eg. ->(*) { Redis.get("enabled") }
+
+        it "disables NetworkResiliency" do
+          expect(callback).to receive(:call).once do
+            is_expected.to be false
+          end
+
+          NetworkResiliency.enabled?(:http)
+        end
+      end
     end
 
     context "when given an invalid argument" do
