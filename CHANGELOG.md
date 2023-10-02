@@ -1,3 +1,7 @@
+###  v0.2.1  (2023-10-02)
+- prevent recursion
+- test coverage
+
 ###  v0.2.0  (2023-10-01)
 - high level patch
 - redis adapter
