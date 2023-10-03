@@ -9,7 +9,6 @@ module Helpers
       raise Redis::TimeoutError if host =~ /timeout/
 
       client_socket, server_socket = Socket.pair(:UNIX, :STREAM, 0)
-      server_socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
 
       Thread.new do
         line = server_socket.gets
