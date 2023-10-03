@@ -1,3 +1,4 @@
+gem "faraday", "~> 1.10"
 require "faraday"
 
 module NetworkResiliency
