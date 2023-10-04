@@ -3,13 +3,22 @@ NetworkResiliency
 ![Gem](https://img.shields.io/gem/dt/network_resiliency?style=plastic)
 [![codecov](https://codecov.io/gh/dpep/network_resiliency_rb/branch/main/graph/badge.svg)](https://codecov.io/gh/dpep/network_resiliency_rb)
 
-Making networks more resilient to errors.
+Making network requests more resilient to error.
 
-Resiliency: the ability to recover from adversity or adjust to change.
+Resiliency: the ability to recover from adversity.
 
 
 ```ruby
 require "network_resiliency"
+
+NetworkResiliency.configure do |conf|
+  conf.statsd = Datadog::Statsd.new
+
+  # patch Redis instances
+  conf.patch :redis
+end
+
+Redis.new.connect
 ```
 
 
