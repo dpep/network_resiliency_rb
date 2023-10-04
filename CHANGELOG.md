@@ -1,3 +1,7 @@
+###  v0.3.0  (2023-10-04)
+- mysql adapter
+- faraday version constraint
+
 ###  v0.2.1  (2023-10-02)
 - prevent recursion
 - test coverage
