@@ -70,5 +70,27 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
         tags: include(destination: host),
       )
     end
+
+    context "when server connection times out" do
+      let(:klass_mock) do
+        Class.new(Mysql2::Client) do
+          def connect(...)
+            raise Mysql2::Error::TimeoutError.new("fake timeout", nil, error_number = 1205)
+          end
+        end
+      end
+
+      it "raises an error" do
+        expect { mysql }.to raise_error(Mysql2::Error::TimeoutError)
+      end
+
+      it "logs timeout" do
+        is_expected.to have_received(:distribution).with(
+          String,
+          Numeric,
+          tags: include(error: Mysql2::Error::TimeoutError),
+        )
+      end
+    end
   end
 end

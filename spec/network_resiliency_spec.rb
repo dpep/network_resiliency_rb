@@ -47,7 +47,7 @@ describe NetworkResiliency do
 
     it "can patch multiple adapters" do
       described_class.configure do |conf|
-        conf.patch(:http, :redis)
+        conf.patch(:http, :redis, :mysql)
       end
 
       expect(
@@ -56,6 +56,10 @@ describe NetworkResiliency do
 
       expect(
         NetworkResiliency::Adapter::Redis.patched?(redis)
+      ).to be true
+
+      expect(
+        NetworkResiliency::Adapter::Mysql.patched?
       ).to be true
     end
 
