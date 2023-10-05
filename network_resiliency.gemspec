@@ -19,6 +19,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "faraday", "~> 1"
   s.add_development_dependency "faraday-rack"
   s.add_development_dependency "mysql2", ">= 0.5"
+  s.add_development_dependency "pg", "~> 1.1"
   s.add_development_dependency "rack"
   s.add_development_dependency "rack-test"
   s.add_development_dependency "redis", "~> 4"

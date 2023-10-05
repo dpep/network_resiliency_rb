@@ -17,7 +17,9 @@ describe NetworkResiliency do
     let(:redis) { Redis.new }
 
     before do
+      stub_const("Mysql2::Client", Class.new(Mysql2::Client))
       stub_const("Net::HTTP", Class.new(Net::HTTP))
+      stub_const("PG::Connection", Class.new(PG::Connection))
       stub_const("Redis::Client", Class.new(Redis::Client))
     end
 
@@ -33,34 +35,36 @@ describe NetworkResiliency do
       end
     end
 
-    context "with Redis" do
-      subject { NetworkResiliency::Adapter::Redis.patched?(redis) }
-
-      it { is_expected.to be false }
-
-      it "patches Redis" do
-        described_class.patch(:redis)
-
-        is_expected.to be true
-      end
-    end
-
-    it "can patch multiple adapters" do
-      described_class.configure do |conf|
-        conf.patch(:http, :redis, :mysql)
+    context "with multiple adapters" do
+      before do
+        described_class.configure do |conf|
+          conf.patch(:http, :mysql, :postgres, :redis)
+        end
       end
 
-      expect(
-        NetworkResiliency::Adapter::HTTP.patched?(http)
-      ).to be true
+      it "patches http" do
+        expect(
+          NetworkResiliency::Adapter::HTTP.patched?
+        ).to be true
+      end
 
-      expect(
-        NetworkResiliency::Adapter::Redis.patched?(redis)
-      ).to be true
+      it "patches mysql" do
+        expect(
+          NetworkResiliency::Adapter::Mysql.patched?
+        ).to be true
+      end
 
-      expect(
-        NetworkResiliency::Adapter::Mysql.patched?
-      ).to be true
+      it "patches postgres" do
+        expect(
+          NetworkResiliency::Adapter::Postgres.patched?
+        ).to be true
+      end
+
+      it "patches redis" do
+        expect(
+          NetworkResiliency::Adapter::Redis.patched?
+        ).to be true
+      end
     end
 
     it "catches bogus input" do

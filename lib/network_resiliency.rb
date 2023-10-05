@@ -6,6 +6,7 @@ module NetworkResiliency
     autoload :Faraday, "network_resiliency/adapter/faraday"
     autoload :Redis, "network_resiliency/adapter/redis"
     autoload :Mysql, "network_resiliency/adapter/mysql"
+    autoload :Postgres, "network_resiliency/adapter/postgres"
   end
 
   extend self
@@ -25,6 +26,8 @@ module NetworkResiliency
         Adapter::Redis.patch
       when :mysql
         Adapter::Mysql.patch
+      when :postgres
+        Adapter::Postgres.patch
       else
         raise NotImplementedError
       end
