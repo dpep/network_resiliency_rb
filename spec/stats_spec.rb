@@ -47,7 +47,7 @@ describe NetworkResiliency::Stats do
 
   describe '#n' do
     it 'starts at 0' do
-      expect(stats.n).to be 0
+      expect(stats.n).to eq 0
     end
 
     it 'accumulates correctly' do
@@ -62,6 +62,10 @@ describe NetworkResiliency::Stats do
   end
 
   describe '#avg' do
+    it 'starts at 0' do
+      expect(stats.avg).to eq 0
+    end
+
     it do
       1_000.times do |i|
         stats << 3
@@ -96,6 +100,10 @@ describe NetworkResiliency::Stats do
   end
 
   describe '#stdev' do
+    it 'starts at 0' do
+      expect(stats.stdev).to eq 0
+    end
+
     it do
       1_000.times do |i|
         stats << 3
@@ -229,6 +237,19 @@ describe NetworkResiliency::Stats do
     it "calculates stats correctly" do
       expect(merged_stats).to eq more_stats
       expect(merged_stats).not_to be more_stats
+    end
+
+    context "when merging an empty Stats object" do
+      let(:more_stats) { described_class.new }
+
+      it "calculates stats correctly" do
+        expect(merged_stats.n).to eq 0
+        expect(merged_stats.avg).to eq 0
+        expect(merged_stats.stdev).to eq 0
+
+        stats << [ 1, 2, 3 ]
+        expect(stats.merge(described_class.new)).to eq stats
+      end
     end
   end
 

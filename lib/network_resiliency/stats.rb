@@ -34,7 +34,7 @@ module NetworkResiliency
     end
 
     def variance(sample: false)
-      @sq_dist / (sample ? (@n - 1) : @n)
+      @n == 0 ? 0 : @sq_dist / (sample ? (@n - 1) : @n)
     end
 
     def stdev
@@ -49,14 +49,20 @@ module NetworkResiliency
     def merge!(other)
       raise ArgumentError unless other.is_a?(self.class)
 
-      prev_n = n
-      @n += other.n
+      if @n == 0
+        @n = other.n
+        @avg = other.avg
+        @sq_dist = other.sq_dist
+      elsif other.n > 0
+        prev_n = n
+        @n += other.n
 
-      delta = other.avg - avg
-      @avg += delta * other.n / n
+        delta = other.avg - avg
+        @avg += delta * other.n / n
 
-      @sq_dist += other.instance_variable_get(:@sq_dist)
-      @sq_dist += (delta ** 2) * prev_n * other.n / n
+        @sq_dist += other.sq_dist
+        @sq_dist += (delta ** 2) * prev_n * other.n / n
+      end
 
       self
     end
@@ -66,8 +72,12 @@ module NetworkResiliency
 
       n == other.n &&
         avg == other.avg &&
-        @sq_dist == other.instance_variable_get(:@sq_dist)
+        @sq_dist == other.sq_dist
     end
+
+    protected
+
+    attr_reader :sq_dist
 
     private
 
