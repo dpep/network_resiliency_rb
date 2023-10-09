@@ -54,14 +54,14 @@ module NetworkResiliency
         @avg = other.avg
         @sq_dist = other.sq_dist
       elsif other.n > 0
-        prev_n = n
+        prev_n = @n
         @n += other.n
 
         delta = other.avg - avg
-        @avg += delta * other.n / n
+        @avg += delta * other.n / @n
 
         @sq_dist += other.sq_dist
-        @sq_dist += (delta ** 2) * prev_n * other.n / n
+        @sq_dist += (delta ** 2) * prev_n * other.n / @n
       end
 
       self

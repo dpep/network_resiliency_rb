@@ -46,8 +46,10 @@ describe NetworkResiliency::Stats do
   end
 
   describe '#n' do
+    subject { stats.n }
+
     it 'starts at 0' do
-      expect(stats.n).to eq 0
+      is_expected.to eq 0
     end
 
     it 'accumulates correctly' do
@@ -57,13 +59,15 @@ describe NetworkResiliency::Stats do
         expect(stats.n).to be (i + 1)
       end
 
-      expect(stats.n).to be 1_000
+      is_expected.to be 1_000
     end
   end
 
   describe '#avg' do
+    subject { stats.avg }
+
     it 'starts at 0' do
-      expect(stats.avg).to eq 0
+      is_expected.to eq 0
     end
 
     it do
@@ -72,6 +76,8 @@ describe NetworkResiliency::Stats do
 
         expect(stats.avg).to eq 3
       end
+
+      is_expected.to eq 3
     end
 
     def check
@@ -100,8 +106,10 @@ describe NetworkResiliency::Stats do
   end
 
   describe '#stdev' do
+    subject { stats.stdev }
+
     it 'starts at 0' do
-      expect(stats.stdev).to eq 0
+      is_expected.to eq 0
     end
 
     it do
@@ -110,6 +118,8 @@ describe NetworkResiliency::Stats do
 
         expect(stats.stdev).to eq 0
       end
+
+      is_expected.to eq 0
     end
 
     def check
@@ -203,15 +213,19 @@ describe NetworkResiliency::Stats do
     end
 
     it "equals another Stats object with the same data" do
-      data = [ 1, 2, 3, 4, 5 ]
+      data = [ 1, 2, 3 ]
       stats << data
 
-      expect(stats).to eq(described_class.new << data)
+      is_expected.to eq(described_class.new << data)
+    end
+
+    it "does not equal another Stats object with different data" do
+      is_expected.not_to eq(described_class.new << [ 1, 2, 3 ])
     end
 
     it "does not equal other objects" do
-      expect(stats).not_to eq(0)
-      expect(stats).not_to eq(Object.new)
+      is_expected.not_to eq(0)
+      is_expected.not_to eq(Object.new)
     end
   end
 
