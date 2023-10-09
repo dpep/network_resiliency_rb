@@ -93,17 +93,6 @@ describe NetworkResiliency::Stats do
 
       expect(stats.n).to eq 1_000
     end
-
-    it 'works with LOTS of random numbers' do
-      100_000.times.map { choose }.each_slice(10_000) do |nums|
-        data << nums
-        stats << nums
-
-        check
-      end
-
-      expect(stats.n).to eq 100_000
-    end
   end
 
   describe '#stdev' do
@@ -137,17 +126,6 @@ describe NetworkResiliency::Stats do
       end
 
       expect(stats.n).to eq 1_000
-    end
-
-    it 'works with LOTS of random numbers' do
-      100_000.times.map { choose }.each_slice(10_000) do |nums|
-        data << nums
-        stats << nums
-
-        check
-      end
-
-      expect(stats.n).to eq 100_000
     end
   end
 
@@ -190,8 +168,9 @@ describe NetworkResiliency::Stats do
       stats << 1
       stats << 2
 
-      more_stats = described_class.new
-      more_stats << [ 3, 4, 5 ]
+      more_stats = described_class.new << [ 3, 4, 5 ]
+
+      expect(stats).to receive(:merge!).with(more_stats).and_call_original
       stats << more_stats
 
       data << [ 1, 2, 3, 4, 5 ]
@@ -199,48 +178,73 @@ describe NetworkResiliency::Stats do
       check
     end
 
-    it 'accepts many Stats objects' do
-      other_stats = described_class.new
+    it "catches bogus input" do
+      expect {
+        stats << Object
+      }.to raise_error(ArgumentError)
+    end
+  end
 
-      expect(stats).to receive(:merge!).with(other_stats)
-      stats << other_stats
+  describe '#==' do
+    it "equals itself" do
+      expect(stats).to eq(stats)
+    end
+
+    it "equals another empty Stats object" do
+      is_expected.to eq(described_class.new)
+    end
+
+    it "equals another Stats object with the same data" do
+      data = [ 1, 2, 3, 4, 5 ]
+      stats << data
+
+      expect(stats).to eq(described_class.new << data)
+    end
+
+    it "does not equal other objects" do
+      expect(stats).not_to eq(0)
+      expect(stats).not_to eq(Object.new)
     end
   end
 
   describe '#merge' do
-    it do
-      1_000.times do |i|
-        values = rand(10..1_000).times.map { choose }
+    subject(:merged_stats) { stats.merge(more_stats) }
 
-        data << values
-        stats << described_class.new(values)
+    let(:more_stats) { described_class.new << [ 1, 2, 3 ] }
 
-        if i % 100 == 0
-          data.flatten!
-          expect(stats.n).to eq data.count
-          expect(stats.avg).to be_within(precision).of(calc_avg)
-          expect(stats.stdev).to be_within(precision).of(calc_stdev)
-        end
-      end
+    it "is aliased to '+'" do
+      expect(stats.method(:merge)).to eq(stats.method(:+))
 
-      expect(stats.n).to be >= 10_000
+      is_expected.to eq(stats + more_stats)
     end
 
-    # too slow to run regularly, but works with 100M data points
-    # it 'works with LOTS of random numbers' do
-    #   1_000_000.times do |i|
-    #     values = rand(10..1_000).times.map { choose }
+    it "is non-destructive" do
+      is_expected.to be_a(described_class)
+      is_expected.not_to eq stats
 
-    #     data << values
-    #     stats << described_class.new(values)
+      expect(stats.n).to eq 0
+      expect(more_stats.n).to eq 3
+    end
 
-    #     if i % 10_000 == 0
-    #       puts "[#{i}] #{stats.n}"
+    it "calculates stats correctly" do
+      expect(merged_stats).to eq more_stats
+      expect(merged_stats).not_to be more_stats
+    end
+  end
 
-    #       expect(stats.stdev).to be_within(precision).of(calc_stdev)
-    #     end
-    #   end
-    # end
+  describe '#merge!' do
+    subject(:merged_stats) { stats.merge!(more_stats) }
+
+    let(:more_stats) { described_class.new << [ 1, 2, 3 ] }
+
+    it "is destructive" do
+      is_expected.to be stats
+    end
+
+    it "calculates stats correctly" do
+      is_expected.to eq more_stats
+      is_expected.not_to be more_stats
+    end
   end
 
   describe "#variance" do
@@ -252,4 +256,38 @@ describe NetworkResiliency::Stats do
       it { expect(stats.variance(sample: true)).to be > stats.variance }
     end
   end
+
+  it "works with lots of random numbers" do
+    1_000.times do |i|
+      values = rand(10..1_000).times.map { choose }
+
+      data << values
+      stats << described_class.new(values)
+
+      if i % 100 == 0
+        data.flatten!
+        expect(stats.n).to eq data.count
+        expect(stats.avg).to be_within(precision).of(calc_avg)
+        expect(stats.stdev).to be_within(precision).of(calc_stdev)
+      end
+    end
+
+    expect(stats.n).to be >= 10_000
+  end
+
+  # too slow to run regularly, but works with 100M data points
+  # it 'works with LOTS of random numbers' do
+  #   1_000_000.times do |i|
+  #     values = rand(10..1_000).times.map { choose }
+
+  #     data << values
+  #     stats << described_class.new(values)
+
+  #     if i % 10_000 == 0
+  #       puts "[#{i}] #{stats.n}"
+
+  #       expect(stats.stdev).to be_within(precision).of(calc_stdev)
+  #     end
+  #   end
+  # end
 end

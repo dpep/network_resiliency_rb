@@ -61,6 +61,14 @@ module NetworkResiliency
       self
     end
 
+    def ==(other)
+      return false unless other.is_a?(self.class)
+
+      n == other.n &&
+        avg == other.avg &&
+        @sq_dist == other.instance_variable_get(:@sq_dist)
+    end
+
     private
 
     def update(value)
@@ -72,19 +80,6 @@ module NetworkResiliency
       @avg += (value - @avg) / @n
 
       @sq_dist += (value - prev_avg) * (value - @avg)
-      # @sq_dist += (sq_dist - @sq_dist) / @n
-
-# for x, w in data_weight_pairs:
-#   w_sum = w_sum + w
-#   mean_old = mean
-#   mean = mean_old + (w / w_sum) * (x - mean_old)
-#   S = S + w * (x - mean_old) * (x - mean)
-
-  # count += 1
-  # delta = newValue - mean
-  # mean += delta / count
-  # delta2 = newValue - mean
-  # M2 += delta * delta2
     end
   end
 end
