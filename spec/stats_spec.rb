@@ -292,6 +292,25 @@ describe NetworkResiliency::Stats do
     end
   end
 
+  describe ".from" do
+    subject do
+      described_class.from(
+        stats.n,
+        stats.avg,
+        stats.instance_variable_get(:@sq_dist)
+      )
+    end
+
+    it { is_expected.to eq stats }
+    it { is_expected.not_to be stats }
+
+    context "when stats has data" do
+      let(:stats) { described_class.new << [ 1, 2, 3, 4, 5 ] }
+
+      it { is_expected.to eq stats }
+    end
+  end
+
   it "works with lots of random numbers" do
     1_000.times do |i|
       values = rand(10..1_000).times.map { choose }
