@@ -295,9 +295,9 @@ describe NetworkResiliency::Stats do
   describe ".from" do
     subject do
       described_class.from(
-        stats.n,
-        stats.avg,
-        stats.instance_variable_get(:@sq_dist)
+        n: stats.n,
+        avg: stats.avg,
+        sq_dist: stats.instance_variable_get(:@sq_dist)
       )
     end
 

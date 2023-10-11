@@ -2,7 +2,7 @@ module NetworkResiliency
   class Stats
     attr_reader :n, :avg
 
-    def self.from(n, avg, sq_dist)
+    def self.from(n:, avg:, sq_dist:)
       new.tap do |instance|
         instance.instance_eval do
           @n = n
