@@ -1,3 +1,5 @@
+require "pg"
+
 describe NetworkResiliency do
   def expect_enabled
     expect(NetworkResiliency.enabled?(:http))
@@ -149,6 +151,29 @@ describe NetworkResiliency do
         expect_enabled.to be true
       end
 
+      expect_enabled.to be false
+    end
+
+    it "is thread safe" do
+      expect_enabled.to be false
+
+      fiber = Fiber.new do
+        NetworkResiliency.enable! do
+          expect_enabled.to be true
+
+          Fiber.yield
+        end
+      end
+
+      fiber.resume
+
+      # Fiber paused inside enable! block
+      expect_enabled.to be false
+
+      fiber.resume
+
+      # Fiber completed
+      expect(fiber).not_to be_alive
       expect_enabled.to be false
     end
   end

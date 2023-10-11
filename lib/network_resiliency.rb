@@ -35,6 +35,7 @@ module NetworkResiliency
   end
 
   def enabled?(adapter)
+    return thread_state["enabled"] if thread_state.key?("enabled")
     return true if @enabled.nil?
 
     if @enabled.is_a?(Proc)
@@ -58,20 +59,20 @@ module NetworkResiliency
 
   def enable!
     original = @enabled
-    @enabled = true
+    thread_state["enabled"] = true
 
     yield if block_given?
   ensure
-    @enabled = original if block_given?
+    thread_state.delete("enabled") if block_given?
   end
 
   def disable!
     original = @enabled
-    @enabled = false
+    thread_state["enabled"] = false
 
     yield if block_given?
   ensure
-    @enabled = original if block_given?
+    thread_state.delete("enabled") if block_given?
   end
 
   def timestamp
@@ -100,5 +101,12 @@ module NetworkResiliency
 
   def reset
     @enabled = nil
+    Thread.current["network_resiliency"] = nil
+  end
+
+  private
+
+  def thread_state
+    Thread.current["network_resiliency"] ||= {}
   end
 end
