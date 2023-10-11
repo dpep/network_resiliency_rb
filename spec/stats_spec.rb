@@ -361,4 +361,14 @@ describe NetworkResiliency::Stats do
       stats << more_stats
     end
   end
+
+  describe "#freeze" do
+    before { stats.freeze }
+
+    it { expect(stats.frozen?).to be true }
+
+    it "prevents modification" do
+      expect { stats << 1 }.to raise_error(FrozenError)
+    end
+  end
 end
