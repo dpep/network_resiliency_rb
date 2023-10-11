@@ -344,4 +344,21 @@ describe NetworkResiliency::Stats do
   #     end
   #   end
   # end
+
+  describe ".synchonize" do
+    it "preserves private methods" do
+      expect(described_class.private_instance_methods).to include(:update)
+    end
+
+    it "makes Stats thread-safer" do
+      fiber = Fiber.new do
+        expect(stats.instance_variable_get(:@lock)).to be_locked
+      end
+
+      more_stats = described_class.new
+      expect(more_stats).to receive(:n) { fiber.resume }
+
+      stats << more_stats
+    end
+  end
 end

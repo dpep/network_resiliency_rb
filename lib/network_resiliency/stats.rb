@@ -2,17 +2,32 @@ module NetworkResiliency
   class Stats
     attr_reader :n, :avg
 
-    def self.from(n:, avg:, sq_dist:)
-      new.tap do |instance|
-        instance.instance_eval do
-          @n = n
-          @avg = avg
-          @sq_dist = sq_dist
+    class << self
+      def from(n:, avg:, sq_dist:)
+        new.tap do |instance|
+          instance.instance_eval do
+            @n = n
+            @avg = avg
+            @sq_dist = sq_dist
+          end
         end
+      end
+
+      private
+
+      def synchronize(fn_name)
+        make_private = private_method_defined?(fn_name)
+        fn = instance_method(fn_name)
+
+        define_method(fn_name) do |*args|
+          @lock.synchronize { fn.bind(self).call(*args) }
+        end
+        private fn_name if make_private
       end
     end
 
     def initialize(values = [])
+      @lock = Thread::Mutex.new
       @n = 0
       @avg = 0.0
       @sq_dist = 0.0 # sum of squared distance from mean
@@ -46,7 +61,7 @@ module NetworkResiliency
     end
     alias_method :+, :merge
 
-    def merge!(other)
+    synchronize def merge!(other)
       raise ArgumentError unless other.is_a?(self.class)
 
       if @n == 0
@@ -81,7 +96,7 @@ module NetworkResiliency
 
     private
 
-    def update(value)
+    synchronize def update(value)
       raise ArgumentError unless value.is_a?(Numeric)
 
       @n += 1
