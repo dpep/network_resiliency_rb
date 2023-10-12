@@ -85,8 +85,8 @@ module NetworkResiliency
     def ==(other)
       return false unless other.is_a?(self.class)
 
-      n == other.n &&
-        avg == other.avg &&
+      @n == other.n &&
+        @avg == other.avg &&
         @sq_dist == other.sq_dist
     end
 
