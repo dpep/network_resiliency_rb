@@ -1,5 +1,3 @@
-require "pg"
-
 describe NetworkResiliency do
   def expect_enabled
     expect(NetworkResiliency.enabled?(:http))

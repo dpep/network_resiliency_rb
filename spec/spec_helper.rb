@@ -1,5 +1,8 @@
 require "byebug"
 require "datadog/statsd"
+require "fiber"
+require "pg"
+require "mysql2"
 require "rspec"
 require "simplecov"
 
