@@ -6,9 +6,9 @@ module NetworkResiliency
       def from(n:, avg:, sq_dist:)
         new.tap do |instance|
           instance.instance_eval do
-            @n = n
-            @avg = avg
-            @sq_dist = sq_dist
+            @n = n.to_i
+            @avg = avg.to_f
+            @sq_dist = sq_dist.to_f
           end
         end
       end
@@ -88,6 +88,65 @@ module NetworkResiliency
       @n == other.n &&
         @avg == other.avg &&
         @sq_dist == other.sq_dist
+    end
+
+    LUA_SCRIPT = <<~LUA
+      local key = KEYS[1]
+      local other_n = tonumber(ARGV[1])
+      local other_avg = tonumber(ARGV[2])
+      local other_sq_dist = tonumber(ARGV[3])
+
+      local n, avg, sq_dist
+      local state = redis.call('GET', key)
+
+      if state then
+        n, avg, sq_dist = string.match(state, "(%d+)|([%d.]+)|([%d.]+)")
+        n = tonumber(n)
+        avg = tonumber(avg) + 0.0
+        sq_dist = tonumber(sq_dist) + 0.0
+
+        local prev_n = n
+        n = n + other_n
+
+        local delta = other_avg - avg
+        avg = avg + delta * other_n / n
+
+        sq_dist = sq_dist + other_sq_dist
+        sq_dist = sq_dist + (delta ^ 2) * prev_n * other_n / n
+      else
+        n = other_n
+        avg = other_avg
+        sq_dist = other_sq_dist
+      end
+
+      state = string.format('%d|%f|%f', n, avg, sq_dist)
+
+      local ttl = 100000
+      redis.call('SET', key, state, 'PX', ttl)
+
+      return { n, tostring(avg), tostring(sq_dist) }
+    LUA
+
+    def sync(redis, key)
+      self.class.sync(redis, key => self)[key]
+    end
+
+    def self.sync(redis, data)
+      data.map do |key, stats|
+        stats ||= new
+
+        n, avg, sq_dist = redis.eval(
+          LUA_SCRIPT,
+          [ "network_resiliency:stats:#{key}" ],
+          [ stats.n, stats.avg, stats.send(:sq_dist) ],
+        )
+
+        [ key, Stats.from(n: n, avg: avg, sq_dist: sq_dist) ]
+      end.to_h
+    end
+
+    def to_s
+      "#<#{self.class.name}:#{object_id} n=#{n} avg=#{avg} sq_dist=#{sq_dist}>"
     end
 
     protected
