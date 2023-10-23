@@ -265,6 +265,20 @@ describe NetworkResiliency::Stats do
         expect(stats.merge(described_class.new)).to eq stats
       end
     end
+
+    it "works when merging lots of individual stats" do
+      stats = described_class.new
+
+      (1..100).each do |i|
+        more_stats = described_class.new << i
+        stats = stats.merge(more_stats)
+        data << i
+
+        expect(stats.n).to eq data.count
+        expect(stats.avg).to be_within(precision).of(calc_avg)
+        expect(stats.stdev).to be_within(precision).of(calc_stdev)
+      end
+    end
   end
 
   describe '#merge!' do
