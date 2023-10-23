@@ -100,10 +100,10 @@ module NetworkResiliency
       local state = redis.call('GET', key)
 
       if state then
-        n, avg, sq_dist = string.match(state, "(%d+)|([%d.]+)|([%d.]+)")
+        n, avg, sq_dist = string.match(state, "(%d+)|([%d.]+)|(%d+)")
         n = tonumber(n)
         avg = tonumber(avg) + 0.0
-        sq_dist = tonumber(sq_dist) + 0.0
+        sq_dist = tonumber(sq_dist)
 
         local prev_n = n
         n = n + other_n
@@ -119,12 +119,12 @@ module NetworkResiliency
         sq_dist = other_sq_dist
       end
 
-      state = string.format('%d|%f|%f', n, avg, sq_dist)
+      state = string.format('%d|%f|%d', n, avg, sq_dist)
 
       local ttl = 100000
       redis.call('SET', key, state, 'PX', ttl)
 
-      return { n, tostring(avg), tostring(sq_dist) }
+      return { n, tostring(avg), sq_dist }
     LUA
 
     def sync(redis, key)
