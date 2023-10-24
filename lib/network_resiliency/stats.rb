@@ -90,41 +90,80 @@ module NetworkResiliency
         @sq_dist == other.sq_dist
     end
 
+    MIN_SAMPLE_SIZE = 1000
+    MAX_WINDOW_LENGTH = 1000
+    STATS_TTL = 24 * 60 * 60 # 1 day
+    CACHE_TTL = 60 # seconds
+
     LUA_SCRIPT = <<~LUA
-      local key = KEYS[1]
-      local other_n = tonumber(ARGV[1])
-      local other_avg = tonumber(ARGV[2])
-      local other_sq_dist = tonumber(ARGV[3])
+      local results = {}
 
-      local n, avg, sq_dist
-      local state = redis.call('GET', key)
+      for i = 0, #KEYS / 2 - 1 do
+        local state_key = KEYS[i * 2 + 1]
+        local cache_key = KEYS[i * 2 + 2]
 
-      if state then
-        n, avg, sq_dist = string.match(state, "(%d+)|([%d.]+)|(%d+)")
-        n = tonumber(n)
-        avg = tonumber(avg) + 0.0
-        sq_dist = tonumber(sq_dist)
+        local n = tonumber(ARGV[i * 3 + 1])
+        local avg = ARGV[i * 3 + 2]
+        local sq_dist = ARGV[i * 3 + 3]
+        local window_len = 0
 
-        local prev_n = n
-        n = n + other_n
+        if n > 0 then
+          -- save new data
+          window_len = redis.call(
+            'LPUSH',
+            state_key,
+            string.format('%d|%f|%d', n, avg, sq_dist)
+          )
+          redis.call('EXPIRE', state_key, #{STATS_TTL})
 
-        local delta = other_avg - avg
-        avg = avg + delta * other_n / n
+          if window_len > #{MAX_WINDOW_LENGTH} then
+            -- trim stats to window length
+            redis.call('LTRIM', state_key, 0, #{MAX_WINDOW_LENGTH - 1})
+          end
+        -- else, just fetching stats
+        end
 
-        sq_dist = sq_dist + other_sq_dist
-        sq_dist = sq_dist + (delta ^ 2) * prev_n * other_n / n
-      else
-        n = other_n
-        avg = other_avg
-        sq_dist = other_sq_dist
+        -- retrieve stats for this key
+        local state = redis.call('GET', cache_key)
+        if state then
+          -- use cached stats
+          n, avg, sq_dist = string.match(state, "(%d+)|([%d.]+)|(%d+)")
+        elseif n == 0 or window_len > 1 then
+          -- aggregate stats in window
+          n = 0
+          avg = 0.0
+          sq_dist = 0
+
+          local stats = redis.call('LRANGE', state_key, 0, -1)
+          for _, entry in ipairs(stats) do
+            local other_n, other_avg, other_sq_dist = string.match(entry, "(%d+)|([%d.]+)|(%d+)")
+            other_n = tonumber(other_n)
+            other_avg = tonumber(other_avg) + 0.0
+            other_sq_dist = tonumber(other_sq_dist)
+
+            local prev_n = n
+            n = n + other_n
+
+            local delta = other_avg - avg
+            avg = avg + delta * other_n / n
+
+            sq_dist = sq_dist + other_sq_dist
+            sq_dist = sq_dist + (delta ^ 2) * prev_n * other_n / n
+          end
+
+          -- update cache
+          if n > #{MIN_SAMPLE_SIZE} then
+            state = string.format('%d|%f|%d', n, avg, sq_dist)
+            redis.call('SET', cache_key, state, 'EX', #{CACHE_TTL})
+          end
+        end
+
+        table.insert(results, n)
+        table.insert(results, tostring(avg))
+        table.insert(results, sq_dist)
       end
 
-      state = string.format('%d|%f|%d', n, avg, sq_dist)
-
-      local ttl = 100000
-      redis.call('SET', key, state, 'PX', ttl)
-
-      return { n, tostring(avg), sq_dist }
+      return results
     LUA
 
     def sync(redis, key)
@@ -132,17 +171,30 @@ module NetworkResiliency
     end
 
     def self.sync(redis, data)
-      data.map do |key, stats|
-        stats ||= new
+      keys = []
+      args = []
 
-        n, avg, sq_dist = redis.eval(
-          LUA_SCRIPT,
-          [ "network_resiliency:stats:#{key}" ],
-          [ stats.n, stats.avg, stats.send(:sq_dist) ],
-        )
+      data.each do |key, stats|
+        keys += [
+          "network_resiliency:stats:#{key}",
+          "network_resiliency:stats:cache:#{key}",
+        ]
+
+        args += [ stats.n, stats.avg, stats.send(:sq_dist) ]
+      end
+
+      res = redis.eval(LUA_SCRIPT, keys, args)
+      data.keys.zip(res.each_slice(3)).map do |key, stats|
+        n, avg, sq_dist = *stats
 
         [ key, Stats.from(n: n, avg: avg, sq_dist: sq_dist) ]
       end.to_h
+    end
+
+    def self.fetch(redis, keys)
+      res = sync(redis, Array(keys).map { |k| [ k, new ] }.to_h)
+
+      keys.is_a?(Array) ? res : res[keys]
     end
 
     def to_s
