@@ -18,6 +18,8 @@ jobs:
     name: Ruby ${{ matrix.ruby-version }}
 
     steps:
+      - name: start Redis
+        run: docker run --name redis --publish 6379:6379 --detach redis:3
       - name: clone ${{ github.repository }}
         uses: actions/checkout@v4
       - name: setup Ruby ${{ matrix.ruby-version }}

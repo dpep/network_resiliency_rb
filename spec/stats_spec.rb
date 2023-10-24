@@ -5,6 +5,7 @@ describe NetworkResiliency::Stats do
 
   let(:precision) { 0.00001 }
   let(:data) { [] }
+  let(:redis) { Redis.new }
 
   def calc_avg
     data.flatten!
@@ -18,8 +19,7 @@ describe NetworkResiliency::Stats do
   end
 
   def choose(limit: 100_000)
-    # rand(-100_000..100_000)
-    rand * limit * 2 - limit
+    rand(0..limit)
   end
 
   describe 'helper methods' do
@@ -383,6 +383,60 @@ describe NetworkResiliency::Stats do
 
     it "prevents modification" do
       expect { stats << 1 }.to raise_error(FrozenError)
+    end
+  end
+
+  describe "#sync" do
+    let(:precision) { 0.1 }
+
+    it "saves stats to Redis" do
+      stats << 100.times.map { choose }
+      res = stats.sync(redis, :test)
+
+      expect(res).to eq stats
+    end
+
+    it "aggregates stats" do
+      30.times do
+        values = rand(1..10).times.map { choose }
+
+        stats << values
+        more_stats = described_class.new << values
+
+        res = more_stats.sync(redis, :test)
+        expect(res.n).to eq stats.n
+        expect(res.avg).to be_within(precision).percent_of(stats.avg)
+        expect(res.stdev).to be_within(precision).percent_of(stats.stdev)
+      end
+    end
+  end
+
+  describe ".sync" do
+    it "allows syncing of multiple stats" do
+      stats1 = described_class.new << 1
+      stats2 = described_class.new << 2
+
+      res = described_class.sync(redis, one: stats1, two: stats2)
+
+      expect(res[:one]).to eq stats1
+      expect(res[:two]).to eq stats2
+    end
+  end
+
+  describe ".fetch" do
+    it "fetches stats from Redis" do
+      stats << 100.times.map { choose }
+      stats.sync(redis, :test)
+
+      res = described_class.fetch(redis, :test)
+      expect(res.n).to eq stats.n
+      expect(res.avg).to be_within(precision).percent_of(stats.avg)
+    end
+  end
+
+  describe "#to_s" do
+    it "prints stats" do
+      expect(stats.to_s).to be_a String
     end
   end
 end
