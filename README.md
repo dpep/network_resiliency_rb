@@ -4,8 +4,8 @@ NetworkResiliency
 [![codecov](https://codecov.io/gh/dpep/network_resiliency_rb/branch/main/graph/badge.svg)](https://codecov.io/gh/dpep/network_resiliency_rb)
 
 Making network requests more resilient to error.
-
-Resiliency: the ability to recover from adversity.
+- less errors, by retrying
+- less time, by setting granular timeouts
 
 
 ```ruby
