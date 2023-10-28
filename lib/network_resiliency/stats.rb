@@ -104,12 +104,11 @@ module NetworkResiliency
 
         local n = tonumber(ARGV[i * 3 + 1])
         local avg = ARGV[i * 3 + 2]
-        local sq_dist = ARGV[i * 3 + 3]
-        local window_len = 0
+        local sq_dist = math.floor(ARGV[i * 3 + 3])
 
         if n > 0 then
           -- save new data
-          window_len = redis.call(
+          local window_len = redis.call(
             'LPUSH',
             state_key,
             string.format('%d|%f|%d', n, avg, sq_dist)
@@ -120,16 +119,17 @@ module NetworkResiliency
             -- trim stats to window length
             redis.call('LTRIM', state_key, 0, #{MAX_WINDOW_LENGTH - 1})
           end
-        -- else, just fetching stats
         end
 
-        -- retrieve stats for this key
-        local state = redis.call('GET', cache_key)
-        if state then
+        -- retrieve aggregated stats
+
+        local cached_stats = redis.call('GET', cache_key)
+        if cached_stats then
           -- use cached stats
-          n, avg, sq_dist = string.match(state, "(%d+)|([%d.]+)|(%d+)")
-        elseif n == 0 or window_len > 1 then
-          -- aggregate stats in window
+          n, avg, sq_dist = string.match(cached_stats, "(%d+)|([%d.]+)|(%d+)")
+          n = tonumber(n)
+        else
+          -- calculate aggregated stats
           n = 0
           avg = 0.0
           sq_dist = 0
@@ -150,14 +150,15 @@ module NetworkResiliency
             sq_dist = sq_dist + other_sq_dist
             sq_dist = sq_dist + (delta ^ 2) * prev_n * other_n / n
           end
-
-          -- update cache
-          if n > #{MIN_SAMPLE_SIZE} then
-            state = string.format('%d|%f|%d', n, avg, sq_dist)
-            redis.call('SET', cache_key, state, 'EX', #{CACHE_TTL})
-          end
         end
 
+        -- update cache
+        if n >= #{MIN_SAMPLE_SIZE} then
+          cached_stats = string.format('%d|%f|%d', n, avg, sq_dist)
+          redis.call('SET', cache_key, cached_stats, 'EX', #{CACHE_TTL})
+        end
+
+        -- accumulate results
         table.insert(results, n)
         table.insert(results, tostring(avg))
         table.insert(results, sq_dist)
@@ -170,7 +171,7 @@ module NetworkResiliency
       self.class.sync(redis, key => self)[key]
     end
 
-    def self.sync(redis, data)
+    def self.sync(redis, **data)
       keys = []
       args = []
 
@@ -192,7 +193,8 @@ module NetworkResiliency
     end
 
     def self.fetch(redis, keys)
-      res = sync(redis, Array(keys).map { |k| [ k, new ] }.to_h)
+      data = Array(keys).map { |k| [ k, new ] }.to_h
+      res = sync(redis, **data)
 
       keys.is_a?(Array) ? res : res[keys]
     end

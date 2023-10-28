@@ -359,7 +359,7 @@ describe NetworkResiliency::Stats do
   #   end
   # end
 
-  describe ".synchonize" do
+  describe ".synchronize" do
     it "preserves private methods" do
       expect(described_class.private_instance_methods).to include(:update)
     end
@@ -387,13 +387,11 @@ describe NetworkResiliency::Stats do
   end
 
   describe "#sync" do
-    let(:precision) { 0.1 }
-
     it "saves stats to Redis" do
       stats << 100.times.map { choose }
       res = stats.sync(redis, :test)
 
-      expect(res).to eq stats
+      expect(res).to approximate stats
     end
 
     it "aggregates stats" do
@@ -404,10 +402,19 @@ describe NetworkResiliency::Stats do
         more_stats = described_class.new << values
 
         res = more_stats.sync(redis, :test)
-        expect(res.n).to eq stats.n
-        expect(res.avg).to be_within(precision).percent_of(stats.avg)
-        expect(res.stdev).to be_within(precision).percent_of(stats.stdev)
+        expect(res).to approximate stats
       end
+    end
+
+    it "caches the aggregated stats after a certain threshold" do
+      n = NetworkResiliency::Stats::MIN_SAMPLE_SIZE
+      stats << n.times.map { choose }
+      res = stats.sync(redis, :test)
+
+      more_stats = described_class.new << choose
+      res2 = more_stats.sync(redis, :test)
+
+      expect(res).to approximate res2
     end
   end
 
@@ -429,8 +436,12 @@ describe NetworkResiliency::Stats do
       stats.sync(redis, :test)
 
       res = described_class.fetch(redis, :test)
-      expect(res.n).to eq stats.n
-      expect(res.avg).to be_within(precision).percent_of(stats.avg)
+      expect(res).to approximate stats
+    end
+
+    it "works without any data" do
+      res = described_class.fetch(redis, :test)
+      expect(res.n).to eq 0
     end
   end
 
