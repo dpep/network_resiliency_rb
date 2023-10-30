@@ -4,6 +4,7 @@ module NetworkResiliency
 
     LOCK = Thread::Mutex.new
     STATS = {}
+    SYNC_LIMIT = 100
 
     def add(key, value)
       local, _ = synchronize do
@@ -14,37 +15,77 @@ module NetworkResiliency
     end
 
     def get(key)
-      local, remote = synchronize { STATS[key] }
+      local, remote = synchronize do
+        STATS[key] ||= [ Stats.new, Stats.new ]
+      end
 
-      local && remote ? (local + remote) : Stats.new
+      local + remote
     end
 
     def reset
       synchronize { STATS.clear }
     end
 
-    def sync(redis, keys)
+    def sync(redis)
+      dirty_keys = {}
+
+      # select data to be synced
       data = synchronize do
+        dirty_keys = STATS.map do |key, (local, remote)|
+          # skip if no new local stats and remote already synced
+          next if local.n == 0 && remote.n > 0
+
+          [ key, local.n ]
+        end.compact.to_h
+
+        # select keys to sync, prioritizing most used
+        keys = dirty_keys.sort_by do |key, weight|
+          -weight
+        end.take(SYNC_LIMIT).map(&:first)
+
+        # update stats for keys being synced
         keys.map do |key|
           local, remote = STATS[key]
-          next unless local && remote
-          next unless local.n > 0
 
-          remote << local
-          STATS[key] = [ Stats.new, remote ]
+          remote << local # update remote stats until sync completes
+          STATS[key][0] = Stats.new # reset local stats
 
           [ key, local ]
-        end.compact.to_h
+        end.to_h
       end
 
-      # sync data to redis
-      remote_stats = Stats.sync(redis, **data)
+      NetworkResiliency.statsd&.distribution(
+        "network_resiliency.sync.keys",
+        data.size,
+        tags: {
+          empty: data.empty?,
+          truncated: data.size < dirty_keys.size,
+        }.select { |_, v| v },
+      )
 
-      # integrate remote results
+      NetworkResiliency.statsd&.distribution(
+        "network_resiliency.sync.keys.dirty",
+        dirty_keys.select { |_, n| n > 0 }.count,
+      )
+
+      return [] if data.empty?
+
+      # sync data to redis
+      remote_stats = if NetworkResiliency.statsd
+        NetworkResiliency.statsd&.time("network_resiliency.sync") do
+          Stats.sync(NetworkResiliency.redis, **data)
+        end
+      else
+        Stats.sync(NetworkResiliency.redis, **data)
+      end
+
+      # integrate new remote stats
       synchronize do
         remote_stats.each do |key, stats|
           local, remote = STATS[key]
-          STATS[key] = [ local, stats ]
+
+          remote.reset
+          remote << stats
         end
       end
 

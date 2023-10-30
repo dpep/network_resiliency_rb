@@ -13,10 +13,12 @@ module NetworkResiliency
 
   extend self
 
-  attr_accessor :statsd
+  attr_accessor :statsd, :redis
 
   def configure
-    yield self
+    yield self if block_given?
+
+    start_syncing if redis
   end
 
   def patch(*adapters)
@@ -99,17 +101,39 @@ module NetworkResiliency
         error: error,
       }.compact,
     )
+
+    key = [ adapter, action, destination ].join(":")
+    StatsEngine.add(key, duration)
+  rescue => e
+    warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
   end
 
   def reset
     @enabled = nil
     Thread.current["network_resiliency"] = nil
     StatsEngine.reset
+    @sync_worker.kill if @sync_worker
   end
 
   private
 
   def thread_state
     Thread.current["network_resiliency"] ||= {}
+  end
+
+  def start_syncing
+    @sync_worker.kill if @sync_worker
+
+    raise "Redis not configured" unless redis
+
+    @sync_worker = Thread.new do
+      while true do
+        StatsEngine.sync(redis)
+
+        sleep(3)
+      end
+    rescue Interrupt
+      # goodbye
+    end
   end
 end

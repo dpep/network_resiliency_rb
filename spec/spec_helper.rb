@@ -31,11 +31,17 @@ RSpec.configure do |config|
   config.before do
     NetworkResiliency.reset
 
+    NetworkResiliency.redis = Redis.new
+
     NetworkResiliency.statsd = instance_double(Datadog::Statsd)
     allow(NetworkResiliency.statsd).to receive(:distribution)
+    allow(NetworkResiliency.statsd).to receive(:time).and_yield
+
+    # disable background sync
+    allow(NetworkResiliency).to receive(:start_syncing)
 
     # since Timecop doesn't work with Process.clock_gettime
-    allow(Process).to receive(:clock_gettime).and_return(*(1..10))
+    allow(Process).to receive(:clock_gettime).and_return(*(1..1_000))
 
     Redis.new.flushall rescue nil
   end

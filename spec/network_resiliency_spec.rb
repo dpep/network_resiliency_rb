@@ -246,5 +246,62 @@ describe NetworkResiliency do
         is_expected.not_to have_received(:distribution)
       end
     end
+
+    context "when errors arise" do
+      before do
+        allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise
+      end
+
+      it "warns, but don't explode" do
+        expect { subject }.to output(/ERROR/).to_stderr
+      end
+    end
+
+    context "when Datadog is not configured" do
+      before { NetworkResiliency.statsd = nil }
+
+      it "still works" do
+        expect(NetworkResiliency::StatsEngine).to receive(:add).with(String, duration)
+        subject
+      end
+    end
+  end
+
+  describe ".start_syncing" do
+    before do
+      # mocking not supported in Threads
+      NetworkResiliency.statsd = nil
+
+      # unstub from spec_helper
+      allow(NetworkResiliency).to receive(:start_syncing).and_call_original
+    end
+
+    context "when Redis is configured" do
+      it { expect(NetworkResiliency.redis).to be }
+
+      it "will be called by .configure" do
+        NetworkResiliency.configure
+        expect(NetworkResiliency).to have_received(:start_syncing)
+      end
+    end
+
+    it "can be called many times without error" do
+      3.times { NetworkResiliency.send :start_syncing }
+    end
+
+    context "when Redis is not configured" do
+      before { NetworkResiliency.redis = nil }
+
+      it "raises an error" do
+        expect {
+          NetworkResiliency.send :start_syncing
+        }.to raise_error(/Redis/)
+      end
+
+      it "does not get called from .configure" do
+        NetworkResiliency.configure
+        expect(NetworkResiliency).not_to have_received(:start_syncing)
+      end
+    end
   end
 end
