@@ -28,9 +28,7 @@ module NetworkResiliency
 
     def initialize(values = [])
       @lock = Thread::Mutex.new
-      @n = 0
-      @avg = 0.0
-      @sq_dist = 0.0 # sum of squared distance from mean
+      reset
 
       values.each {|x| update(x) }
     end
@@ -88,6 +86,12 @@ module NetworkResiliency
       @n == other.n &&
         @avg == other.avg &&
         @sq_dist == other.sq_dist
+    end
+
+    synchronize def reset
+      @n = 0
+      @avg = 0.0
+      @sq_dist = 0.0 # sum of squared distance from mean
     end
 
     MIN_SAMPLE_SIZE = 1000

@@ -306,6 +306,22 @@ describe NetworkResiliency::Stats do
     end
   end
 
+  describe "#reset" do
+    before { stats << 10.times.map { choose } }
+
+    it "resets stats" do
+      expect(stats.n).to be > 0
+      expect(stats.avg).to be > 0
+      expect(stats.stdev).to be > 0
+
+      stats.reset
+
+      expect(stats.n).to eq 0
+      expect(stats.avg).to eq 0
+      expect(stats.stdev).to eq 0
+    end
+  end
+
   describe ".from" do
     subject do
       described_class.from(
