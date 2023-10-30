@@ -1,4 +1,5 @@
 require "network_resiliency/stats"
+require "network_resiliency/stats_engine"
 require "network_resiliency/version"
 
 module NetworkResiliency
@@ -103,6 +104,7 @@ module NetworkResiliency
   def reset
     @enabled = nil
     Thread.current["network_resiliency"] = nil
+    StatsEngine.reset
   end
 
   private
