@@ -1,3 +1,12 @@
+###  v0.3.1  (2023-11-02)
+- sync thread safety
+- order of magnitude stats
+- stats engine
+- improve stats aggregation
+- lua v1
+- thread safety
+- postgres adapter
+
 ###  v0.3.0  (2023-10-04)
 - mysql adapter
 - faraday version constraint
