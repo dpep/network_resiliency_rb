@@ -31,6 +31,10 @@ module NetworkResiliency
 
       # select data to be synced
       data = synchronize do
+        # ensure sync is not run concurrently
+        return [] if @syncing
+        @syncing = Thread.current
+
         dirty_keys = STATS.map do |key, (local, remote)|
           # skip if no new local stats and remote already synced
           next if local.n == 0 && remote.n > 0
@@ -73,10 +77,10 @@ module NetworkResiliency
       # sync data to redis
       remote_stats = if NetworkResiliency.statsd
         NetworkResiliency.statsd&.time("network_resiliency.sync") do
-          Stats.sync(NetworkResiliency.redis, **data)
+          Stats.sync(redis, **data)
         end
       else
-        Stats.sync(NetworkResiliency.redis, **data)
+        Stats.sync(redis, **data)
       end
 
       # integrate new remote stats
@@ -90,6 +94,13 @@ module NetworkResiliency
       end
 
       remote_stats.keys
+    ensure
+      # release sync lock
+      @syncing = nil if @syncing == Thread.current
+    end
+
+    def syncing?
+      !!@syncing
     end
 
     private

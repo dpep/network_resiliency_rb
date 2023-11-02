@@ -170,6 +170,62 @@ describe NetworkResiliency::StatsEngine do
         expect(sync).to eq [ "foo" ]
       end
     end
+
+    describe "concurrency lock" do
+      before { described_class.add("foo", 1) }
+
+      it "prevents other threads from concurrently syncing" do
+        # only once, since concurrent sync aborts early
+        expect(NetworkResiliency.statsd).to receive(:distribution).with(
+          "network_resiliency.sync.keys",
+          any_args,
+        ).once
+        expect(NetworkResiliency.statsd).to receive(:distribution).with(
+          "network_resiliency.sync.keys.dirty",
+          any_args,
+        ).once
+
+        expect(NetworkResiliency.statsd).to receive(:time).once do |&block|
+          expect(described_class).to be_syncing
+
+          # this should be a no-op
+          t = Thread.new { described_class.sync(redis) }
+          expect(t.value).to be_empty
+
+          expect(described_class).to be_syncing
+
+          block.call
+        end
+
+        expect(sync).to eq [ "foo" ]
+      end
+
+      it "is resilient to failures" do
+        expect(NetworkResiliency.statsd).to receive(:time).and_raise
+
+        expect { sync }.to raise_error(RuntimeError)
+
+        expect(described_class).not_to be_syncing
+      end
+    end
+  end
+
+  describe ".syncing?" do
+    before { described_class.add("foo", 1) }
+
+    it { expect(described_class).not_to be_syncing }
+
+    it "detects syncing" do
+      expect(NetworkResiliency.statsd).to receive(:time) do |&block|
+        expect(described_class).to be_syncing
+
+        block.call
+      end
+
+      described_class.sync(redis)
+
+      expect(described_class).not_to be_syncing
+    end
   end
 
   describe ".reset" do
