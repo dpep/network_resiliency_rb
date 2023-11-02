@@ -224,17 +224,21 @@ describe NetworkResiliency do
 
     let(:action) { "connect" }
     let(:error) { Net::OpenTimeout }
-    let(:duration) { 10 }
+    let(:duration) { 8 }
     let(:host) { "example.com" }
-
-    it "calls Datadog" do
-      is_expected.to have_received(:distribution)
-    end
 
     it "captures metric info" do
       is_expected.to have_received(:distribution).with(
         "network_resiliency.#{action}",
         duration,
+        tags: include(destination: host, error: error),
+      )
+    end
+
+    it "captures order of magnitude info" do
+      is_expected.to have_received(:distribution).with(
+        "network_resiliency.#{action}.magnitude",
+        10,
         tags: include(destination: host, error: error),
       )
     end
@@ -248,12 +252,19 @@ describe NetworkResiliency do
     end
 
     context "when errors arise" do
+      let(:error) { RuntimeError }
+
       before do
-        allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise
+        allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise(error)
       end
 
       it "warns, but don't explode" do
         expect { subject }.to output(/ERROR/).to_stderr
+
+        is_expected.to have_received(:increment).with(
+          "network_resiliency.error",
+          tags: { type: error },
+        )
       end
     end
 
@@ -263,6 +274,16 @@ describe NetworkResiliency do
       it "still works" do
         expect(NetworkResiliency::StatsEngine).to receive(:add).with(String, duration)
         subject
+      end
+      
+      context "when errors arise" do
+        before do
+          allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise
+        end
+
+        it "warns, but don't explode" do
+          expect { subject }.to output(/ERROR/).to_stderr
+        end
       end
     end
   end

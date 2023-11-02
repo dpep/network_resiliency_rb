@@ -34,42 +34,29 @@ describe NetworkResiliency::Adapter::Postgres do
     subject do
       pg rescue PG::Error
 
-      NetworkResiliency.statsd
+      NetworkResiliency
     end
 
     let(:host) { "localhost" }
     let(:pg) { PG.connect(host: host, user: "postgres") }
-    let(:select) { pg.query("SELECT 1").first.first.last }
+    # let(:select) { pg.query("SELECT 1").first.first.last }
 
     before do
       described_class.patch
+      allow(NetworkResiliency).to receive(:record)
     end
-
-    # fit { byebug }
 
     it "can not connect to a mysql server" do
       expect { pg }.to raise_error(PG::Error)
     end
 
     it "logs connection" do
-      is_expected.to have_received(:distribution).with(
-        /connect/,
-        Numeric,
-        anything,
-      )
-    end
-
-    it "logs duration" do
-      is_expected.to have_received(:distribution) do |_, duration, _|
-        expect(duration).to be > 0
-      end
-    end
-
-    it "tags the destination host" do
-      is_expected.to have_received(:distribution).with(
-        String,
-        Numeric,
-        tags: include(destination: host),
+      is_expected.to have_received(:record).with(
+        adapter: "postgres",
+        action: "connect",
+        destination: host,
+        duration: be_a(Numeric),
+        error: nil,
       )
     end
 
@@ -87,10 +74,8 @@ describe NetworkResiliency::Adapter::Postgres do
       end
 
       it "logs timeout" do
-        is_expected.to have_received(:distribution).with(
-          String,
-          Numeric,
-          tags: include(error: PG::Error),
+        is_expected.to have_received(:record).with(
+          include(error: PG::Error),
         )
       end
     end

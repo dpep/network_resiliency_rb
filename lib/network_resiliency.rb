@@ -1,6 +1,9 @@
+require "network_resiliency/refinements"
 require "network_resiliency/stats"
 require "network_resiliency/stats_engine"
 require "network_resiliency/version"
+
+using NetworkResiliency::Refinements
 
 module NetworkResiliency
   module Adapter
@@ -102,9 +105,26 @@ module NetworkResiliency
       }.compact,
     )
 
+    NetworkResiliency.statsd&.distribution(
+      "network_resiliency.#{action}.magnitude",
+      duration.order_of_magnitude,
+      tags: {
+        adapter: adapter,
+        destination: destination,
+        error: error,
+      }.compact,
+    )
+
     key = [ adapter, action, destination ].join(":")
     StatsEngine.add(key, duration)
   rescue => e
+    NetworkResiliency.statsd&.increment(
+      "network_resiliency.error",
+      tags: {
+        type: e.class,
+      },
+    )
+
     warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
   end
 

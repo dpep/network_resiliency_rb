@@ -59,41 +59,29 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
   end
 
   describe ".connect" do
-    subject do
+    subject(:ping) do
       redis.ping rescue Redis::CannotConnectError
 
-      NetworkResiliency.statsd
+      NetworkResiliency
     end
 
     before do
       described_class.patch(redis)
+      allow(NetworkResiliency).to receive(:record)
     end
 
     it "logs connection" do
-      is_expected.to have_received(:distribution).with(
-        /connect/,
-        Numeric,
-        anything,
-      )
-    end
-
-    it "logs duration" do
-      is_expected.to have_received(:distribution) do |_, duration, _|
-        expect(duration).to be > 0
-      end
-    end
-
-    it "tags the destination host" do
-      is_expected.to have_received(:distribution).with(
-        String,
-        Numeric,
-        tags: include(destination: host),
+      is_expected.to have_received(:record).with(
+        adapter: "redis",
+        action: "connect",
+        destination: host,
+        duration: be_a(Numeric),
+        error: nil,
       )
     end
 
     it "completes request" do
       expect(redis.ping).to eq "PONG"
-      expect(NetworkResiliency.statsd).to have_received(:distribution)
     end
 
     context "when server connection times out" do
@@ -104,10 +92,8 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
       end
 
       it "logs timeout" do
-        is_expected.to have_received(:distribution).with(
-          String,
-          Numeric,
-          tags: include(error: Redis::TimeoutError),
+        is_expected.to have_received(:record).with(
+          include(error: Redis::TimeoutError),
         )
       end
     end
@@ -116,7 +102,7 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
       before { NetworkResiliency.disable! }
 
       it "does not call datadog" do
-        is_expected.not_to have_received(:distribution)
+        is_expected.not_to have_received(:record)
       end
 
       context "when server connection times out" do
@@ -127,7 +113,7 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
         end
 
         it "does not log timeout" do
-          is_expected.not_to have_received(:distribution)
+          is_expected.not_to have_received(:record)
         end
       end
     end

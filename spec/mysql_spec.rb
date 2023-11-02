@@ -34,7 +34,7 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
     subject do
       mysql rescue Mysql2::Error::ConnectionError
 
-      NetworkResiliency.statsd
+      NetworkResiliency
     end
 
     let(:host) { "my.fav.sql.com" }
@@ -43,6 +43,7 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
 
     before do
       described_class.patch
+      allow(NetworkResiliency).to receive(:record)
     end
 
     it "can not connect to a mysql server" do
@@ -50,24 +51,12 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
     end
 
     it "logs connection" do
-      is_expected.to have_received(:distribution).with(
-        /connect/,
-        Numeric,
-        anything,
-      )
-    end
-
-    it "logs duration" do
-      is_expected.to have_received(:distribution) do |_, duration, _|
-        expect(duration).to be > 0
-      end
-    end
-
-    it "tags the destination host" do
-      is_expected.to have_received(:distribution).with(
-        String,
-        Numeric,
-        tags: include(destination: host),
+      is_expected.to have_received(:record).with(
+        adapter: "mysql",
+        action: "connect",
+        destination: host,
+        duration: be_a(Numeric),
+        error: nil,
       )
     end
 
@@ -85,10 +74,8 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
       end
 
       it "logs timeout" do
-        is_expected.to have_received(:distribution).with(
-          String,
-          Numeric,
-          tags: include(error: Mysql2::Error::TimeoutError),
+        is_expected.to have_received(:record).with(
+          include(error: Mysql2::Error::TimeoutError),
         )
       end
     end
