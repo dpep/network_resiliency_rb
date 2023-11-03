@@ -1,3 +1,10 @@
+###  v0.3.2  (2023-11-03)
+- stats observability
+- surface errors in specs
+- destination filter
+- error observability
+- improve order of magnitude
+
 ###  v0.3.1  (2023-11-02)
 - sync thread safety
 - order of magnitude stats
