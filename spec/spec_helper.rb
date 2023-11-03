@@ -41,6 +41,11 @@ RSpec.configure do |config|
     # disable background sync
     allow(NetworkResiliency).to receive(:start_syncing)
 
+    # surface errors instead of failing quietly
+    allow(NetworkResiliency.statsd).to receive(:increment).with("network_resiliency.error", any_args) do
+      raise $!
+    end
+
     # since Timecop doesn't work with Process.clock_gettime
     allow(Process).to receive(:clock_gettime).and_return(*(1..1_000))
 
