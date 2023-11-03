@@ -275,7 +275,7 @@ describe NetworkResiliency do
         expect(NetworkResiliency::StatsEngine).to receive(:add).with(String, duration)
         subject
       end
-      
+
       context "when errors arise" do
         before do
           allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise

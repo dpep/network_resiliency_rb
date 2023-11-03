@@ -107,7 +107,7 @@ module NetworkResiliency
 
     NetworkResiliency.statsd&.distribution(
       "network_resiliency.#{action}.magnitude",
-      duration.order_of_magnitude,
+      duration.order_of_magnitude(ceil: true),
       tags: {
         adapter: adapter,
         destination: destination,
