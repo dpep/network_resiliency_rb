@@ -263,7 +263,10 @@ describe NetworkResiliency do
 
         is_expected.to have_received(:increment).with(
           "network_resiliency.error",
-          tags: { type: error },
+          tags: {
+            method: :record,
+            type: error,
+          },
         )
       end
     end

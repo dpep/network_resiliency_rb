@@ -121,6 +121,7 @@ module NetworkResiliency
     NetworkResiliency.statsd&.increment(
       "network_resiliency.error",
       tags: {
+        method: __method__,
         type: e.class,
       },
     )
