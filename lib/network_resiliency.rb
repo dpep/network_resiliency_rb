@@ -113,7 +113,31 @@ module NetworkResiliency
     )
 
     key = [ adapter, action, destination ].join(":")
-    StatsEngine.add(key, duration)
+    StatsEngine.add(key, duration).tap do |stats|
+      tags = {
+        adapter: adapter,
+        destination: destination,
+        n: stats.n.order_of_magnitude,
+      }
+
+      NetworkResiliency.statsd&.distribution(
+        "network_resiliency.#{action}.stats.n",
+        stats.n,
+        tags: tags,
+      )
+
+      NetworkResiliency.statsd&.distribution(
+        "network_resiliency.#{action}.stats.avg",
+        stats.avg,
+        tags: tags,
+      )
+
+      NetworkResiliency.statsd&.distribution(
+        "network_resiliency.#{action}.stats.stdev",
+        stats.stdev,
+        tags: tags,
+      )
+    end
   rescue => e
     NetworkResiliency.statsd&.increment(
       "network_resiliency.error",

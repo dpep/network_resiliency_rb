@@ -233,6 +233,18 @@ describe NetworkResiliency do
         duration,
         tags: include(destination: host, error: error),
       )
+
+      is_expected.to have_received(:distribution).with(
+        "network_resiliency.#{action}.stats.n",
+        1,
+        anything,
+      )
+
+      is_expected.to have_received(:distribution).with(
+        "network_resiliency.#{action}.stats.avg",
+        duration,
+        tags: include(n: 1),
+      )
     end
 
     it "captures order of magnitude info" do
@@ -256,6 +268,12 @@ describe NetworkResiliency do
 
       before do
         allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise(error)
+
+        # replace spec_helper stub that raises errors
+        NetworkResiliency.statsd = instance_double(Datadog::Statsd)
+        allow(NetworkResiliency.statsd).to receive(:distribution)
+        allow(NetworkResiliency.statsd).to receive(:increment)
+        allow(NetworkResiliency.statsd).to receive(:time).and_yield
       end
 
       it "warns, but don't explode" do
@@ -275,7 +293,7 @@ describe NetworkResiliency do
       before { NetworkResiliency.statsd = nil }
 
       it "still works" do
-        expect(NetworkResiliency::StatsEngine).to receive(:add).with(String, duration)
+        expect(NetworkResiliency::StatsEngine).to receive(:add).and_call_original
         subject
       end
 
@@ -284,7 +302,7 @@ describe NetworkResiliency do
           allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise
         end
 
-        it "warns, but don't explode" do
+        it "warns, but doesn't explode" do
           expect { subject }.to output(/ERROR/).to_stderr
         end
       end
