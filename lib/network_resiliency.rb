@@ -89,11 +89,8 @@ module NetworkResiliency
 
   # private
 
-  IP_ADDRESS_REGEX = Regexp.new(/\d{1,3}(\.\d{1,3}){3}/)
-
   def record(adapter:, action:, destination:, duration:, error: nil)
-    # filter raw IP addresses
-    return if IP_ADDRESS_REGEX.match?(destination)
+    return if ignore_destination?(adapter, action, destination)
 
     NetworkResiliency.statsd&.distribution(
       "network_resiliency.#{action}",
@@ -127,6 +124,13 @@ module NetworkResiliency
     )
 
     warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
+  end
+
+  IP_ADDRESS_REGEX = Regexp.new(/\d{1,3}(\.\d{1,3}){3}/)
+
+  def ignore_destination?(adapter, action, destination)
+    # filter raw IP addresses
+    IP_ADDRESS_REGEX.match?(destination)
   end
 
   def reset
