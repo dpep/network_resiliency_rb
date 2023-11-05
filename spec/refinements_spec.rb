@@ -44,4 +44,20 @@ describe NetworkResiliency::Refinements do
       end
     end
   end
+
+  describe "#power_ceil" do
+    it { expect(0.power_ceil).to eq 0 }
+    it { expect(1.power_ceil).to eq 1 }
+
+    it { expect(0.1.power_ceil).to eq 1 }
+
+    it { expect(10.power_ceil).to eq 10 }
+
+    it { expect(11.power_ceil).to eq 20 }
+    it { expect(13.power_ceil).to eq 20 }
+    it { expect(19.power_ceil).to eq 20 }
+
+    it { expect(111.power_ceil).to eq 200 }
+    it { expect(234.power_ceil).to eq 300 }
+  end
 end
