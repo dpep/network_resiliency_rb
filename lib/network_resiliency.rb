@@ -161,7 +161,11 @@ module NetworkResiliency
     @enabled = nil
     Thread.current["network_resiliency"] = nil
     StatsEngine.reset
-    @sync_worker.kill if @sync_worker
+
+    if @sync_worker
+      @sync_worker.kill
+      @sync_worker = nil
+    end
   end
 
   private
@@ -176,13 +180,11 @@ module NetworkResiliency
     raise "Redis not configured" unless redis
 
     @sync_worker = Thread.new do
-      while true do
+      loop do
         StatsEngine.sync(redis)
 
         sleep(3)
       end
-    rescue Interrupt
-      # goodbye
     end
   end
 end
