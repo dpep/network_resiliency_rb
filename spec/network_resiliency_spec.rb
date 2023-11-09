@@ -338,6 +338,130 @@ describe NetworkResiliency do
     end
   end
 
+  describe ".timeouts_for" do
+    subject(:timeouts) do
+      described_class.timeouts_for(
+        adapter: :http,
+        action: :connect,
+        destination: "example.com",
+        max: max
+      )
+    end
+
+    let(:stats) do
+      instance_double(
+        NetworkResiliency::Stats,
+        n: n,
+        avg: 10,
+        stdev: 1,
+      )
+    end
+    let(:n) { described_class::RESILIENCY_SIZE_THRESHOLD }
+    let(:p99) { 20 }
+    let(:max) { 100 }
+
+    before do
+      allow(described_class::StatsEngine).to receive(:get).and_return(stats)
+      described_class.mode = :resilient
+    end
+
+    it "makes two attempts" do
+      is_expected.to eq [ p99, max - p99 ]
+    end
+
+    it "does not exceed the max timeout" do
+      expect(timeouts.sum).to be <= max
+    end
+
+    context "when n is too small" do
+      let(:n) { described_class::RESILIENCY_SIZE_THRESHOLD - 1 }
+
+      it { is_expected.to eq [ max ] }
+    end
+
+    context "when there is no max timeout" do
+      let(:max) { nil }
+
+      it "should make one attempt with a timeout and one unbounded attempt" do
+        is_expected.to eq [ 20, nil ]
+      end
+    end
+
+    context "when the max timeout is less than the expected p99" do
+      let(:max) { 15 }
+
+      it "only makes one attempt, with the max" do
+        is_expected.to eq [ max ]
+      end
+
+      it "logs the event" do
+        expect(NetworkResiliency.statsd).to receive(:increment).with(
+          "network_resiliency.audit.timeout_too_low",
+          anything,
+        )
+
+        subject
+      end
+    end
+
+    context "when the max timeout is similarly sized to the p99" do
+      let(:max) { 30 }
+
+      specify { expect(max - p99).to be < p99 }
+
+      it "makes two attempts, using the max as the second" do
+        is_expected.to eq [ p99, max ]
+      end
+
+      it "logs the event" do
+        expect(NetworkResiliency.statsd).to receive(:increment).with(
+          "network_resiliency.audit.timeout_expanded",
+          anything,
+        )
+
+        subject
+      end
+    end
+
+    context "when in observe mode" do
+      before { described_class.mode = :observe }
+
+      it { is_expected.to eq [ max ] }
+
+      it "should not even fetch the stats" do
+        expect(described_class::StatsEngine).not_to receive(:get)
+      end
+    end
+
+    context "when errors arise" do
+      let(:error) { RuntimeError }
+
+      before do
+        allow(NetworkResiliency::StatsEngine).to receive(:get).and_raise(error)
+
+        # replace spec_helper stub that raises errors
+        NetworkResiliency.statsd = instance_double(Datadog::Statsd)
+        allow(NetworkResiliency.statsd).to receive(:distribution)
+        allow(NetworkResiliency.statsd).to receive(:increment)
+        allow(NetworkResiliency.statsd).to receive(:time).and_yield
+      end
+
+      it "warns and falls back to the max timeout" do
+        expect { subject }.to output(/ERROR/).to_stderr
+
+        expect(described_class.statsd).to have_received(:increment).with(
+          "network_resiliency.error",
+          tags: {
+            method: :timeouts_for,
+            type: error,
+          },
+        )
+
+        is_expected.to eq [ max ]
+      end
+    end
+  end
+
   describe ".start_syncing" do
     before do
       # mocking not supported in Threads

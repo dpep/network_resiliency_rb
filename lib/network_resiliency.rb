@@ -15,6 +15,7 @@ module NetworkResiliency
   end
 
   MODE = [ :observe, :resilient ].freeze
+  RESILIENCY_SIZE_THRESHOLD = 1_000
 
   extend self
 
@@ -169,6 +170,79 @@ module NetworkResiliency
   def ignore_destination?(adapter, action, destination)
     # filter raw IP addresses
     IP_ADDRESS_REGEX.match?(destination)
+  end
+
+  def timeouts_for(adapter:, action:, destination:, max: nil)
+    default = [ max ]
+
+    return default if NetworkResiliency.mode == :observe
+
+    key = [ adapter, action, destination ].join(":")
+    stats = StatsEngine.get(key)
+
+    return default unless stats.n >= RESILIENCY_SIZE_THRESHOLD
+
+    tags = {
+      adapter: adapter,
+      action: action,
+      destination: destination,
+    }
+
+    p99 = (stats.avg + stats.stdev * 3).power_ceil
+    timeouts = []
+
+    if max
+      if p99 < max
+        timeouts << p99
+
+        # fallback attempt
+        if max - p99 > p99
+          # use remaining time for second attempt
+          timeouts << max - p99
+        else
+          timeouts << max
+
+          NetworkResiliency.statsd&.increment(
+            "network_resiliency.audit.timeout_expanded",
+            tags: tags,
+          )
+        end
+      else
+        # awkward...the specified timeout is less than our expected p99
+        timeouts << max
+
+        NetworkResiliency.statsd&.increment(
+          "network_resiliency.audit.timeout_too_low",
+          tags: tags,
+        )
+      end
+    else
+      timeouts << p99
+
+      # timeouts << p99 * 10 if NetworkResiliency.mode == :resolute
+
+      # unbounded second attempt
+      timeouts << nil
+
+      NetworkResiliency.statsd&.increment(
+        "network_resiliency.audit.timeout_missing",
+        tags: tags,
+      )
+    end
+
+    timeouts
+  rescue => e
+    NetworkResiliency.statsd&.increment(
+      "network_resiliency.error",
+      tags: {
+        method: __method__,
+        type: e.class,
+      },
+    )
+
+    warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
+
+    default
   end
 
   def reset
