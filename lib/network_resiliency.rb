@@ -14,6 +14,8 @@ module NetworkResiliency
     autoload :Postgres, "network_resiliency/adapter/postgres"
   end
 
+  MODE = [ :observe, :resilient ].freeze
+
   extend self
 
   attr_accessor :statsd, :redis
@@ -85,6 +87,18 @@ module NetworkResiliency
   def timestamp
     # milliseconds
     Process.clock_gettime(Process::CLOCK_MONOTONIC) * 1_000
+  end
+
+  def mode
+    @mode || :observe
+  end
+
+  def mode=(mode)
+    unless MODE.include?(mode)
+      raise ArgumentError, "invalid NetworkResiliency mode: #{mode}"
+    end
+
+    @mode = mode
   end
 
   # private
@@ -159,6 +173,7 @@ module NetworkResiliency
 
   def reset
     @enabled = nil
+    @mode = nil
     Thread.current["network_resiliency"] = nil
     StatsEngine.reset
 

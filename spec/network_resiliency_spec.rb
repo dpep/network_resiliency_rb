@@ -203,9 +203,38 @@ describe NetworkResiliency do
 
       NetworkResiliency.configure do |conf|
         conf.enabled = false
+        conf.mode = :resilient
       end
 
       expect_enabled.to be false
+      expect(NetworkResiliency.mode).to be :resilient
+    end
+  end
+
+  describe ".mode" do
+    subject { NetworkResiliency.mode }
+
+    it "defaults to observe" do
+      is_expected.to be :observe
+    end
+
+    it "is can be set" do
+      NetworkResiliency.mode = :resilient
+
+      is_expected.to be :resilient
+    end
+
+    it "fails fast on invalid input" do
+      expect {
+        NetworkResiliency.mode = :foo
+      }.to raise_error(ArgumentError)
+    end
+
+    it "resets" do
+      NetworkResiliency.mode = :resilient
+      NetworkResiliency.reset
+
+      is_expected.to be :observe
     end
   end
 
