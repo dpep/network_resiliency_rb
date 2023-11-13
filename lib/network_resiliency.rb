@@ -235,7 +235,7 @@ module NetworkResiliency
           timeouts << max
 
           NetworkResiliency.statsd&.increment(
-            "network_resiliency.audit.timeout_expanded",
+            "network_resiliency.timeout.raised",
             tags: tags,
           )
         end
@@ -244,7 +244,7 @@ module NetworkResiliency
         timeouts << max
 
         NetworkResiliency.statsd&.increment(
-          "network_resiliency.audit.timeout_too_low",
+          "network_resiliency.timeout.too_low",
           tags: tags,
         )
       end
@@ -257,7 +257,7 @@ module NetworkResiliency
       timeouts << nil
 
       NetworkResiliency.statsd&.increment(
-        "network_resiliency.audit.timeout_missing",
+        "network_resiliency.timeout.missing",
         tags: tags,
       )
     end

@@ -477,7 +477,7 @@ describe NetworkResiliency do
 
       it "logs the event" do
         expect(NetworkResiliency.statsd).to receive(:increment).with(
-          "network_resiliency.audit.timeout_too_low",
+          "network_resiliency.timeout.too_low",
           anything,
         )
 
@@ -496,7 +496,7 @@ describe NetworkResiliency do
 
       it "logs the event" do
         expect(NetworkResiliency.statsd).to receive(:increment).with(
-          "network_resiliency.audit.timeout_expanded",
+          "network_resiliency.timeout.raised",
           anything,
         )
 
