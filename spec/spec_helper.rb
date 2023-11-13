@@ -36,6 +36,7 @@ RSpec.configure do |config|
     NetworkResiliency.statsd = instance_double(Datadog::Statsd)
     allow(NetworkResiliency.statsd).to receive(:distribution)
     allow(NetworkResiliency.statsd).to receive(:increment)
+    allow(NetworkResiliency.statsd).to receive(:gauge)
     allow(NetworkResiliency.statsd).to receive(:time).and_yield
 
     # surface errors instead of failing quietly

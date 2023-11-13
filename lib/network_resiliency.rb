@@ -104,7 +104,7 @@ module NetworkResiliency
 
   # private
 
-  def record(adapter:, action:, destination:, duration:, error: nil)
+  def record(adapter:, action:, destination:, duration:, error:, timeout: nil, attempts: 1)
     return if ignore_destination?(adapter, action, destination)
 
     NetworkResiliency.statsd&.distribution(
@@ -114,6 +114,7 @@ module NetworkResiliency
         adapter: adapter,
         destination: destination,
         error: error,
+        attempts: (attempts if attempts > 1),
       }.compact,
     )
 
@@ -127,8 +128,37 @@ module NetworkResiliency
       }.compact,
     )
 
-    key = [ adapter, action, destination ].join(":")
-    StatsEngine.add(key, duration).tap do |stats|
+    NetworkResiliency.statsd&.gauge(
+      "network_resiliency.#{action}.timeout",
+      timeout,
+      tags: {
+        adapter: adapter,
+        destination: destination,
+      },
+    )
+
+    if error
+      NetworkResiliency.statsd&.distribution(
+        "network_resiliency.#{action}.time_saved",
+        timeout - duration,
+        tags: {
+          adapter: adapter,
+          destination: destination,
+        },
+      ) if timeout
+    else
+      # track successful retries
+      NetworkResiliency.statsd&.increment(
+        "network_resiliency.#{action}.resilient",
+        tags: {
+          adapter: adapter,
+          destination: destination,
+        },
+      ) if attempts > 1
+
+      # record stats
+      key = [ adapter, action, destination ].join(":")
+      stats = StatsEngine.add(key, duration)
       tags = {
         adapter: adapter,
         destination: destination,
@@ -153,6 +183,8 @@ module NetworkResiliency
         tags: tags,
       )
     end
+
+    nil
   rescue => e
     NetworkResiliency.statsd&.increment(
       "network_resiliency.error",
@@ -208,7 +240,7 @@ module NetworkResiliency
           )
         end
       else
-        # awkward...the specified timeout is less than our expected p99
+        # the specified timeout is less than our expected p99...awkward
         timeouts << max
 
         NetworkResiliency.statsd&.increment(

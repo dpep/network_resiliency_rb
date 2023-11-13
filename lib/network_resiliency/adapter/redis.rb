@@ -36,35 +36,49 @@ module NetworkResiliency
       end
 
       module Instrumentation
-        # def initialize(...)
-        #   super
-
-        #   @network_resiliency_attempts = options[:reconnect_attempts]
-        #   options[:reconnect_attempts] = 0
-        # end
-
         def establish_connection
           return super unless NetworkResiliency.enabled?(:redis)
 
+          original_timeout = @options[:connect_timeout]
+
+          timeouts = NetworkResiliency.timeouts_for(
+            adapter: "redis",
+            action: "connect",
+            destination: host,
+            max: original_timeout,
+          )
+
+          attempts = 0
+          ts = -NetworkResiliency.timestamp
+
           begin
-            ts = -NetworkResiliency.timestamp
+            attempts += 1
+            error = nil
+
+            @options[:connect_timeout] = timeouts.shift
 
             super
           rescue ::Redis::CannotConnectError => e
             # capture error
+
+            # grab underlying exception within Redis wrapper
+            error = e.cause.class
+
+            retry if timeouts.size > 0
+
             raise
           ensure
             ts += NetworkResiliency.timestamp
-
-            # grab underlying exception within Redis wrapper
-            error = e ? e.cause.class : nil
+            @options[:connect_timeout] = original_timeout
 
             NetworkResiliency.record(
               adapter: "redis",
               action: "connect",
               destination: host,
-              error: error,
               duration: ts,
+              error: error,
+              timeout: @options[:connect_timeout],
+              attempts: attempts,
             )
           end
         end

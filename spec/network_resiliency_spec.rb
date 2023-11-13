@@ -246,21 +246,31 @@ describe NetworkResiliency do
         destination: host,
         duration: duration,
         error: error,
+        timeout: timeout,
+        attempts: attempts,
       )
 
       NetworkResiliency.statsd
     end
 
     let(:action) { "connect" }
-    let(:error) { Net::OpenTimeout }
+    let(:error) { nil }
     let(:duration) { 8 }
     let(:host) { "example.com" }
+    let(:timeout) { 100 }
+    let(:attempts) { 1 }
 
     it "captures metric info" do
       is_expected.to have_received(:distribution).with(
         "network_resiliency.#{action}",
         duration,
-        tags: include(destination: host, error: error),
+        tags: include(destination: host),
+      )
+
+      is_expected.to have_received(:gauge).with(
+        "network_resiliency.#{action}.timeout",
+        timeout,
+        anything,
       )
 
       is_expected.to have_received(:distribution).with(
@@ -276,11 +286,46 @@ describe NetworkResiliency do
       )
     end
 
+    it "does not track attempts for first time successes" do
+      is_expected.to have_received(:distribution).with(
+        "network_resiliency.#{action}",
+        any_args,
+      ) do |_, _, tags:|
+        expect(tags).not_to include(:attempts)
+      end
+    end
+
+    it "does not miscount successful retries" do
+      is_expected.not_to have_received(:increment).with(
+        "network_resiliency.#{action}.resilient",
+        anything,
+      )
+    end
+
+    context "with multiple attempts" do
+      let(:attempts) { 2 }
+
+      it "tracks attempts" do
+        is_expected.to have_received(:distribution).with(
+          "network_resiliency.#{action}",
+          duration,
+          tags: include(attempts: attempts),
+        )
+      end
+
+      it "tracks successful retries" do
+        is_expected.to have_received(:increment).with(
+          "network_resiliency.#{action}.resilient",
+          anything,
+        )
+      end
+    end
+
     it "captures order of magnitude info" do
       is_expected.to have_received(:distribution).with(
         "network_resiliency.#{action}.magnitude",
         10,
-        tags: include(destination: host, error: error),
+        anything,
       )
     end
 
@@ -292,16 +337,52 @@ describe NetworkResiliency do
       end
     end
 
-    context "when errors arise" do
-      let(:error) { RuntimeError }
+    context "when there is a connection error" do
+      let(:error) { Net::OpenTimeout }
 
+      it "captures error info" do
+        is_expected.to have_received(:distribution).with(
+          "network_resiliency.#{action}",
+          duration,
+          tags: include(error: error),
+        )
+      end
+
+      it "does not update stats" do
+        expect(NetworkResiliency::StatsEngine).not_to receive(:add)
+
+        subject
+      end
+
+      it "tracks time saved by failing fast" do
+        is_expected.to have_received(:distribution).with(
+          "network_resiliency.#{action}.time_saved",
+          timeout - duration,
+          anything,
+        )
+      end
+
+      context "when there is no timeout" do
+        let(:timeout) { nil }
+
+        it "does not track time saved" do
+          is_expected.not_to have_received(:distribution).with(
+            "network_resiliency.#{action}.time_saved",
+            any_args,
+          )
+        end
+      end
+    end
+
+    context "when errors arise in .record itself" do
       before do
-        allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise(error)
+        allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise
 
         # replace spec_helper stub that raises errors
         NetworkResiliency.statsd = instance_double(Datadog::Statsd)
         allow(NetworkResiliency.statsd).to receive(:distribution)
         allow(NetworkResiliency.statsd).to receive(:increment)
+        allow(NetworkResiliency.statsd).to receive(:gauge)
         allow(NetworkResiliency.statsd).to receive(:time).and_yield
       end
 
@@ -312,7 +393,7 @@ describe NetworkResiliency do
           "network_resiliency.error",
           tags: {
             method: :record,
-            type: error,
+            type: RuntimeError,
           },
         )
       end
@@ -433,7 +514,7 @@ describe NetworkResiliency do
       end
     end
 
-    context "when errors arise" do
+    context "when errors arise in .timeouts_for itself" do
       let(:error) { RuntimeError }
 
       before do
