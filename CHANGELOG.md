@@ -1,3 +1,8 @@
+###  v0.4.0  (2023-11-13)
+- redis resiliency
+- timeouts_for
+- mode
+
 ###  v0.3.2  (2023-11-03)
 - stats observability
 - surface errors in specs
