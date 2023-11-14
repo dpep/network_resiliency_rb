@@ -31,7 +31,7 @@ module NetworkResiliency
 
       # select data to be synced
       data = synchronize do
-        # ensure sync is not run concurrently
+        # ensure sync does not run concurrently
         return [] if @syncing
         @syncing = Thread.current
 
