@@ -204,7 +204,7 @@ module NetworkResiliency
     IP_ADDRESS_REGEX.match?(destination)
   end
 
-  def timeouts_for(adapter:, action:, destination:, max: nil)
+  def timeouts_for(adapter:, action:, destination:, max: nil, units: :ms)
     default = [ max ]
 
     return default if NetworkResiliency.mode == :observe
@@ -262,7 +262,14 @@ module NetworkResiliency
       )
     end
 
-    timeouts
+    case units
+    when nil, :ms, :milliseconds
+      timeouts
+    when :s, :seconds
+      timeouts.map { |t| t.to_f / 1_000 if t }
+    else
+      raise ArgumentError, "invalid units: #{units}"
+    end
   rescue => e
     NetworkResiliency.statsd&.increment(
       "network_resiliency.error",
@@ -299,7 +306,7 @@ module NetworkResiliency
     @sync_worker.kill if @sync_worker
 
     raise "Redis not configured" unless redis
-
+    
     @sync_worker = Thread.new do
       loop do
         StatsEngine.sync(redis)

@@ -46,6 +46,7 @@ module NetworkResiliency
             action: "connect",
             destination: host,
             max: original_timeout,
+            units: :seconds,
           )
 
           attempts = 0
@@ -77,7 +78,7 @@ module NetworkResiliency
               destination: host,
               duration: ts,
               error: error,
-              timeout: @options[:connect_timeout],
+              timeout: @options[:connect_timeout] * 1_000,
               attempts: attempts,
             )
           end

@@ -425,7 +425,8 @@ describe NetworkResiliency do
         adapter: :http,
         action: :connect,
         destination: "example.com",
-        max: max
+        max: max,
+        units: units,
       )
     end
 
@@ -440,6 +441,7 @@ describe NetworkResiliency do
     let(:n) { described_class::RESILIENCY_SIZE_THRESHOLD }
     let(:p99) { 20 }
     let(:max) { 100 }
+    let(:units) { nil }
 
     before do
       allow(described_class::StatsEngine).to receive(:get).and_return(stats)
@@ -452,6 +454,12 @@ describe NetworkResiliency do
 
     it "does not exceed the max timeout" do
       expect(timeouts.sum).to be <= max
+    end
+
+    context "when no stats are available" do
+      let(:stats) { NetworkResiliency::Stats.new }
+
+      it { is_expected.to eq [ max ] }
     end
 
     context "when n is too small" do
@@ -539,6 +547,44 @@ describe NetworkResiliency do
         )
 
         is_expected.to eq [ max ]
+      end
+    end
+
+    describe "units" do
+      subject { timeouts.first }
+
+      it "defaults to milliseconds" do
+        is_expected.to be p99
+      end
+
+      context "when units are milliseconds" do
+        let(:units) { :ms }
+
+        it { is_expected.to be p99 }
+      end
+
+      context "when units are seconds" do
+        let(:units) { :seconds }
+
+        it { is_expected.to eq 0.02 }
+
+        context "when no stats are available" do
+          let(:stats) { NetworkResiliency::Stats.new }
+
+          it { is_expected.to be max }
+
+          context "when there is no max" do
+            let(:max) { nil }
+
+            it { is_expected.to be nil }
+          end
+        end
+      end
+
+      context "when units is invalid" do
+        let(:units) { :foo }
+
+        it { expect { timeouts }.to raise_error(ArgumentError) }
       end
     end
   end
