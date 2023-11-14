@@ -1,3 +1,6 @@
+###  v0.4.1  (2023-11-14)
+- timeout units
+
 ###  v0.4.0  (2023-11-13)
 - redis resiliency
 - timeouts_for
