@@ -568,6 +568,12 @@ describe NetworkResiliency do
 
         it { is_expected.to eq 0.02 }
 
+        context "when max is below p99" do
+          let(:max) { 0.001 }
+
+          it { is_expected.to eq max }
+        end
+
         context "when no stats are available" do
           let(:stats) { NetworkResiliency::Stats.new }
 

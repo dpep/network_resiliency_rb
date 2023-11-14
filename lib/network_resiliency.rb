@@ -224,6 +224,8 @@ module NetworkResiliency
     timeouts = []
 
     if max
+      max *= 1_000 if units == :s || units == :seconds
+
       if p99 < max
         timeouts << p99
 
@@ -306,7 +308,7 @@ module NetworkResiliency
     @sync_worker.kill if @sync_worker
 
     raise "Redis not configured" unless redis
-    
+
     @sync_worker = Thread.new do
       loop do
         StatsEngine.sync(redis)
