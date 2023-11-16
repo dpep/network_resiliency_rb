@@ -18,7 +18,7 @@ NetworkResiliency.configure do |conf|
   conf.patch :redis
 end
 
-Redis.new.connect
+Redis.new.ping
 ```
 
 
