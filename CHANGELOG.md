@@ -1,3 +1,8 @@
+###  v0.5.0  (2023-11-16)
+- postgres timeout stats
+- mysql timeout stats
+- http resiliency
+
 ###  v0.4.1  (2023-11-14)
 - timeout units
 
