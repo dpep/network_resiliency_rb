@@ -38,7 +38,10 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
     end
 
     let(:host) { "my.fav.sql.com" }
-    let(:mysql) { Mysql2::Client.new(host: host, socket: mock_mysql) }
+    let(:mysql) do
+      Mysql2::Client.new(host: host, socket: mock_mysql, connect_timeout: timeout)
+    end
+    let(:timeout) { 60 }
     # let(:select) { mysql.query("SELECT 1").first.first.last }
 
     before do
@@ -55,8 +58,9 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
         adapter: "mysql",
         action: "connect",
         destination: host,
-        duration: be_a(Numeric),
+        duration: be_a(Integer),
         error: nil,
+        timeout: be_a(Integer),
       )
     end
 

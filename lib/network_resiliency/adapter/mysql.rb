@@ -18,8 +18,6 @@ module NetworkResiliency
 
       module Instrumentation
         def connect(_, _, host, *args)
-          # timeout = query_options[:connect_timeout]
-
           return super unless NetworkResiliency.enabled?(:mysql)
 
           begin
@@ -38,6 +36,7 @@ module NetworkResiliency
               destination: host,
               error: e&.class,
               duration: ts,
+              timeout: query_options[:connect_timeout] * 1_000,
             )
           end
         end
