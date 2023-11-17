@@ -153,6 +153,7 @@ module NetworkResiliency
         tags: {
           adapter: adapter,
           destination: destination,
+          attempts: attempts,
         },
       ) if attempts > 1
 
