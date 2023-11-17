@@ -1,3 +1,6 @@
+###  v0.5.1  (2023-11-17)
+- support nil timeouts
+
 ###  v0.5.0  (2023-11-16)
 - postgres timeout stats
 - mysql timeout stats
