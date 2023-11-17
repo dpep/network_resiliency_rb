@@ -104,7 +104,7 @@ module NetworkResiliency
 
   # private
 
-  def record(adapter:, action:, destination:, duration:, error:, timeout: nil, attempts: 1)
+  def record(adapter:, action:, destination:, duration:, error:, timeout:, attempts: 1)
     return if ignore_destination?(adapter, action, destination)
 
     NetworkResiliency.statsd&.distribution(
