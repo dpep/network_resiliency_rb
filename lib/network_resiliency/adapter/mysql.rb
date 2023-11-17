@@ -42,6 +42,8 @@ module NetworkResiliency
         end
 
         # def query(sql, options = {})
+        #   query_options[:read_timeout]
+        #   query_options[:write_timeout]
         #   puts "query"
         #   super
         # end
