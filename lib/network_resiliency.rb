@@ -135,7 +135,7 @@ module NetworkResiliency
         adapter: adapter,
         destination: destination,
       },
-    )
+    ) if timeout && timeout > 0
 
     if error
       NetworkResiliency.statsd&.distribution(
@@ -145,7 +145,7 @@ module NetworkResiliency
           adapter: adapter,
           destination: destination,
         },
-      ) if timeout
+      ) if timeout && timeout > 0
     else
       # track successful retries
       NetworkResiliency.statsd&.increment(

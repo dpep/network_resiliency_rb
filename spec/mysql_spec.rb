@@ -46,7 +46,7 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
 
     before do
       described_class.patch
-      allow(NetworkResiliency).to receive(:record)
+      allow(NetworkResiliency).to receive(:record).and_call_original
     end
 
     it "can not connect to a mysql server" do
@@ -60,8 +60,28 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
         destination: host,
         duration: be_a(Integer),
         error: nil,
-        timeout: be_a(Integer),
+        timeout: be_a(Numeric),
       )
+    end
+
+    it "logs timeout" do
+      subject
+
+      expect(NetworkResiliency.statsd).to have_received(:gauge).with(
+        "network_resiliency.connect.timeout",
+        timeout * 1_000,
+        anything,
+      )
+    end
+
+    context "when connect timeout is nil" do
+      let(:timeout) { nil }
+
+      it "does not log timeout" do
+        subject
+
+        expect(NetworkResiliency.statsd).not_to have_received(:gauge)
+      end
     end
 
     context "when server connection times out" do

@@ -286,6 +286,28 @@ describe NetworkResiliency do
       )
     end
 
+    context "when timeout is nil" do
+      let(:timeout) { nil }
+
+      it "does not track timeout" do
+        is_expected.not_to have_received(:gauge).with(
+          "network_resiliency.#{action}.timeout",
+          any_args,
+        )
+      end
+    end
+
+    context "when timeout is 0" do
+      let(:timeout) { 0 }
+
+      it "does not track timeout" do
+        is_expected.not_to have_received(:gauge).with(
+          "network_resiliency.#{action}.timeout",
+          any_args,
+        )
+      end
+    end
+
     it "does not track attempts for first time successes" do
       is_expected.to have_received(:distribution).with(
         "network_resiliency.#{action}",

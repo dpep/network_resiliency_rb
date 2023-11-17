@@ -78,7 +78,7 @@ module NetworkResiliency
               destination: host,
               duration: ts,
               error: error,
-              timeout: @options[:connect_timeout] * 1_000,
+              timeout: @options[:connect_timeout].to_f * 1_000,
               attempts: attempts,
             )
           end

@@ -36,7 +36,7 @@ module NetworkResiliency
               destination: host,
               error: e&.class,
               duration: ts,
-              timeout: query_options[:connect_timeout] * 1_000,
+              timeout: query_options[:connect_timeout].to_f * 1_000,
             )
           end
         end

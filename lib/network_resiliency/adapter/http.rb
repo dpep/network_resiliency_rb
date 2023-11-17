@@ -55,7 +55,7 @@ module NetworkResiliency
               destination: address,
               error: error,
               duration: ts,
-              timeout: self.open_timeout * 1_000,
+              timeout: self.open_timeout.to_f * 1_000,
               attempts: attempts,
             )
           end

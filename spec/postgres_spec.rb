@@ -60,7 +60,7 @@ describe NetworkResiliency::Adapter::Postgres do
         destination: host,
         duration: be_a(Integer),
         error: nil,
-        timeout: be_a(Integer),
+        timeout: be_a(Numeric),
       )
     end
 
