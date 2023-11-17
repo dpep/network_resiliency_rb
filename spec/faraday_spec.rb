@@ -23,8 +23,10 @@ describe NetworkResiliency::Adapter::Faraday, :mock_socket do
         adapter: "http",
         action: "connect",
         destination: uri.host,
-        duration: be_a(Numeric),
+        duration: be_a(Integer),
         error: nil,
+        timeout: be_a(Numeric),
+        attempts: be_an(Integer),
       )
     end
 

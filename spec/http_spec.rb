@@ -40,6 +40,8 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       NetworkResiliency
     end
 
+    let(:body) { http.get("/").body }
+
     before do
       described_class.patch(http)
       allow(NetworkResiliency).to receive(:record)
@@ -50,14 +52,15 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
         adapter: "http",
         action: "connect",
         destination: uri.host,
-        duration: be_a(Numeric),
+        duration: be_a(Integer),
         error: nil,
+        timeout: be_a(Numeric),
+        attempts: be_an(Integer),
       )
     end
 
     it "completes request" do
-      res = http.get "/"
-      expect(res.body).to eq "OK"
+      expect(body).to eq "OK"
     end
 
     context "when server connection times out" do
@@ -88,6 +91,48 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
 
         it "does not log timeout" do
           is_expected.not_to have_received(:record)
+        end
+      end
+    end
+
+    describe "resilient mode" do
+      before do
+        NetworkResiliency.mode = :resilient
+
+        allow(NetworkResiliency).to receive(:timeouts_for) { timeouts.dup }
+      end
+
+      let(:default_timeout) { http.open_timeout }
+      let(:timeouts) { [ 10, 100 ].freeze }
+
+      it "completes request" do
+        expect(body).to eq "OK"
+      end
+
+      it { expect(timeouts.first).not_to eq default_timeout }
+
+      it "dynamically adjusts the timeout" do
+        expect(http.open_timeout).to eq default_timeout
+
+        expect(Timeout).to receive(:timeout) do |timeout, _|
+          expect(timeout).to eq timeouts.first
+        end
+
+        subject
+      end
+
+      it "restores the original timeout" do
+        subject
+
+        expect(http.open_timeout).to eq default_timeout
+      end
+
+      context "when server connection times out" do
+        let(:uri) { URI("http://timeout.com") }
+
+        it "retries" do
+          expect(TCPSocket).to receive(:open).twice
+          subject
         end
       end
     end
