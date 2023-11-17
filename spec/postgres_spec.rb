@@ -38,7 +38,10 @@ describe NetworkResiliency::Adapter::Postgres do
     end
 
     let(:host) { "localhost" }
-    let(:pg) { PG.connect(host: host, user: "postgres") }
+    let(:pg) do
+      PG.connect(host: host, user: "postgres", connect_timeout: timeout)
+    end
+    let(:timeout) { 60 }
     # let(:select) { pg.query("SELECT 1").first.first.last }
 
     before do
@@ -55,8 +58,9 @@ describe NetworkResiliency::Adapter::Postgres do
         adapter: "postgres",
         action: "connect",
         destination: host,
-        duration: be_a(Numeric),
+        duration: be_a(Integer),
         error: nil,
+        timeout: be_a(Integer),
       )
     end
 

@@ -38,6 +38,7 @@ module NetworkResiliency
               destination: host,
               error: e&.class,
               duration: ts,
+              timeout: opts[:connect_timeout].to_i * 1_000,
             )
           end
         end
