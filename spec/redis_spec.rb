@@ -59,11 +59,13 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
   end
 
   describe ".connect" do
-    subject(:ping) do
-      redis.ping rescue Redis::CannotConnectError
+    subject(:connect) do
+      client rescue Redis::CannotConnectError
 
       NetworkResiliency
     end
+
+    let(:client) { redis._client.connect }
 
     before do
       described_class.patch(redis)
@@ -82,15 +84,13 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
       )
     end
 
-    it "completes request" do
-      expect(redis.ping).to eq "PONG"
-    end
+    it { expect(client).to be_connected }
 
     context "when server connection times out" do
       let(:host) { "timeout" }
 
       it "raises an error" do
-        expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+        expect { client }.to raise_error(Redis::CannotConnectError)
       end
 
       it "logs timeout" do
@@ -111,7 +111,7 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
         let(:host) { "timeout" }
 
         it "raises an error" do
-          expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+          expect { client }.to raise_error(Redis::CannotConnectError)
         end
 
         it "does not log timeout" do
@@ -130,33 +130,29 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
       let(:default_timeout) { Redis::Client::DEFAULTS[:timeout] }
       let(:timeouts) { [ 10, 100 ].freeze }
 
-      it "completes request" do
-        expect(redis.ping).to eq "PONG"
-      end
-
+      it { expect(client).to be_connected }
+      it { expect(client.connect_timeout).to eq default_timeout }
       it { expect(timeouts.first).not_to eq default_timeout }
 
       it "dynamically adjusts the timeout" do
-        expect(redis._client.connect_timeout).to eq default_timeout
-
         expect(Redis::Connection::Ruby).to receive(:connect) do |config|
           expect(config[:connect_timeout]).to eq timeouts.first
         end
 
-        ping
+        connect
       end
 
       it "restores the original timeout" do
-        ping
+        connect
 
-        expect(redis._client.connect_timeout).to eq default_timeout
+        expect(client.connect_timeout).to eq default_timeout
       end
 
       context "when server connection times out" do
         let(:host) { "timeout" }
 
         it "raises an error" do
-          expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+          expect { client }.to raise_error(Redis::CannotConnectError)
         end
 
         it "logs timeout" do
@@ -167,7 +163,8 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
 
         it "retries" do
           expect(Redis::Connection::Ruby).to receive(:connect).twice
-          ping
+
+          connect
         end
 
         it "dynamically adjusts the timeout each time" do
@@ -180,7 +177,7 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
             raise Redis::TimeoutError
           end
 
-          ping
+          connect
         end
 
         it "logs the failed attempts" do
@@ -205,9 +202,7 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
           end
         end
 
-        it "completes request" do
-          expect(redis.ping).to eq "PONG"
-        end
+        it { expect(client).to be_connected }
 
         it "logs" do
           is_expected.to have_received(:record).with(
