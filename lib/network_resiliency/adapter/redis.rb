@@ -125,6 +125,7 @@ module NetworkResiliency
 
         def call(command)
           return super unless NetworkResiliency.enabled?(:redis)
+          return super unless command.is_a?(Array)
 
           command_key = command.first.to_s
 
