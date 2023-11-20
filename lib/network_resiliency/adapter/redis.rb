@@ -35,19 +35,43 @@ module NetworkResiliency
         end
       end
 
-      module Instrumentation
-        def establish_connection
-          return super unless NetworkResiliency.enabled?(:redis)
+      IDEMPOTENT_COMMANDS = [
+        "exists",
+        "expire",
+        "get",
+        "getex",
+        "getrange",
+        "mget",
+        "mset",
+        "ping",
+        "scard",
+        "sdiff",
+        "sdiffstore",
+        "set",
+        "sismember",
+        "smembers",
+        "smismember",
+      ].freeze
 
-          original_timeout = @options[:connect_timeout]
+      refine ::Redis::Client do
+        private
+
+        def with_resilience(action, destination, idempotent, &block)
+          timeout_key = action == :connect ? :connect_timeout : :read_timeout
+          original_timeout = @options[timeout_key]
 
           timeouts = NetworkResiliency.timeouts_for(
             adapter: "redis",
-            action: "connect",
-            destination: host,
-            max: original_timeout,
+            action: action.to_s,
+            destination: destination,
+            max: @options[timeout_key],
             units: :seconds,
           )
+
+          unless idempotent
+            # only try once, with most lenient timeout
+            timeouts = timeouts.last(1)
+          end
 
           attempts = 0
           ts = -NetworkResiliency.timestamp
@@ -56,10 +80,10 @@ module NetworkResiliency
             attempts += 1
             error = nil
 
-            @options[:connect_timeout] = timeouts.shift
+            @options[timeout_key] = timeouts.shift
 
-            super
-          rescue ::Redis::CannotConnectError => e
+            yield
+          rescue ::Redis::BaseConnectionError => e
             # capture error
 
             # grab underlying exception within Redis wrapper
@@ -70,18 +94,51 @@ module NetworkResiliency
             raise
           ensure
             ts += NetworkResiliency.timestamp
-            @options[:connect_timeout] = original_timeout
+            @options[timeout_key] = original_timeout
 
             NetworkResiliency.record(
               adapter: "redis",
-              action: "connect",
-              destination: host,
+              action: action.to_s,
+              destination: destination,
               duration: ts,
               error: error,
-              timeout: @options[:connect_timeout].to_f * 1_000,
+              timeout: @options[timeout_key].to_f * 1_000,
               attempts: attempts,
             )
           end
+        end
+
+        def idempotent?(command)
+          NetworkResiliency::Adapter::Redis::IDEMPOTENT_COMMANDS.include?(command)
+        end
+      end
+
+      module Instrumentation
+        using NetworkResiliency::Refinements
+        using NetworkResiliency::Adapter::Redis
+
+        def establish_connection
+          return super unless NetworkResiliency.enabled?(:redis)
+
+          with_resilience(:connect, host, true) { super }
+        end
+
+        def call(command)
+          return super unless NetworkResiliency.enabled?(:redis)
+
+          command_key = command.first.to_s
+
+          # larger commands may have larger timeouts
+          command_size = command.size.order_of_magnitude
+          destination = [
+            host,
+            command_key,
+            (command_size if command_size > 1),
+          ].compact.join(":")
+
+          idempotent = idempotent?(command_key)
+
+          with_resilience(:request, destination, idempotent) { super }
         end
       end
     end

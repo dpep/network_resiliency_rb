@@ -299,7 +299,7 @@ module NetworkResiliency
     end
   end
 
-  private
+  # private
 
   def thread_state
     Thread.current["network_resiliency"] ||= {}

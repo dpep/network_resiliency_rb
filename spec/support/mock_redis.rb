@@ -33,6 +33,7 @@ module Helpers
         server_socket.write("#{resp}")
         server_socket.write("\r\n") unless resp.end_with?("\r\n")
         server_socket.close
+      rescue Errno::EPIPE, Errno::ENOTCONN
       end
 
       Redis::Connection::Ruby.new(client_socket)
