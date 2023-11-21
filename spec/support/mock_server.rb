@@ -16,6 +16,8 @@ module Helpers
           # puts "client: #{line}"
         end
 
+        sleep $1.to_f if path =~ %r{/timeout/(\d+)}
+
         resp = "OK"
         headers = [
           "http/1.1 200 ok",
