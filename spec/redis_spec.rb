@@ -1,5 +1,5 @@
 describe NetworkResiliency::Adapter::Redis, :mock_redis do
-  let(:redis) { Redis.new(url: "redis://#{host}", reconnect_attempts: 0) }
+  let(:redis) { Redis.new(url: "redis://#{host}") }
   let(:host) { "localhost" }
 
   describe ".patch" do

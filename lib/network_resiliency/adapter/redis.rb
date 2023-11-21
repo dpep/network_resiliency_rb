@@ -82,7 +82,7 @@ module NetworkResiliency
 
             @options[timeout_key] = timeouts.shift
 
-            yield
+            without_reconnect { yield }
           rescue ::Redis::BaseConnectionError, SystemCallError => e
             # capture error
 
