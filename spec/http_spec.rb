@@ -1,6 +1,10 @@
 describe NetworkResiliency::Adapter::HTTP, :mock_socket do
   let(:http) { Net::HTTP.new(uri.host) }
-  let(:uri) { URI('http://example.com') }
+  let(:uri) { URI('http://example.com/') }
+
+  before do
+    allow(NetworkResiliency).to receive(:record)
+  end
 
   describe ".patch" do
     subject { described_class.patched?(http) }
@@ -44,7 +48,6 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
 
     before do
       described_class.patch(http)
-      allow(NetworkResiliency).to receive(:record)
     end
 
     it "logs connection" do
@@ -114,8 +117,8 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       it "dynamically adjusts the timeout" do
         expect(http.open_timeout).to eq default_timeout
 
-        expect(Timeout).to receive(:timeout) do |timeout, _|
-          expect(timeout).to eq timeouts.first
+        expect(Timeout).to receive(:timeout) do
+          expect(http.connect_timeout).to eq timeouts.first
         end
 
         subject
@@ -135,6 +138,171 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
           subject
         end
       end
+    end
+  end
+
+  describe ".request" do
+    subject(:body) do
+      http.request(request).body rescue Net::ReadTimeout
+    end
+
+    let(:request) { Net::HTTP::Get.new(uri.path) }
+
+    before do
+      described_class.patch(http)
+    end
+
+    it "logs connection" do
+      body
+
+      expect(NetworkResiliency).to have_received(:record).with(
+        adapter: "http",
+        action: "request",
+        destination: "get:#{uri.host}:#{uri.path}",
+        duration: be_a(Integer),
+        error: nil,
+        timeout: be_a(Numeric),
+        attempts: be_an(Integer),
+      )
+    end
+
+    it "completes request" do
+      is_expected.to eq "OK"
+    end
+
+    describe "resilient mode" do
+      before do
+        NetworkResiliency.mode = :resilient
+
+        allow(NetworkResiliency).to receive(:timeouts_for) { timeouts.dup }
+      end
+
+      let(:default_timeout) { http.read_timeout }
+      let(:timeouts) { [ 1, 0.010 ].freeze }
+
+      it { expect(http.read_timeout).to eq default_timeout }
+      it { expect(timeouts.first).not_to eq default_timeout }
+
+      it "dynamically adjusts the timeout" do
+        expect(request).to receive(:exec).and_call_original do
+          expect(http.read_timeout).to eq timeouts.first
+        end
+
+        body
+      end
+
+      it "restores the original timeout" do
+        body
+
+        expect(http.read_timeout).to eq default_timeout
+      end
+
+      it "dynamically adjusts max_retries" do
+        http.max_retries = 2
+
+        expect(request).to receive(:exec).and_call_original do
+          expect(http.max_retries).to eq 0
+        end
+
+        body
+
+        expect(http.max_retries).to eq 2
+      end
+
+      context "when server connection times out" do
+        before do
+          allow(request).to receive(:exec).and_raise(Net::ReadTimeout)
+        end
+
+        it "retries" do
+          body
+          expect(request).to have_received(:exec).twice
+        end
+
+        it "retries with a separate connection" do
+          expect(http).to receive(:connect).twice.and_call_original
+
+          body
+        end
+
+        context "when request is not idepotent" do
+          let(:request) { Net::HTTP::Post.new(uri.path) }
+
+          it "does not retry" do
+            subject
+
+            expect(request).to have_received(:exec).once
+          end
+
+          it "uses the most lenient timeout" do
+            expect(request).to receive(:exec).and_call_original do
+              expect(http.read_timeout).to eq timeouts.last
+            end
+
+            subject
+          end
+        end
+      end
+
+      context "when server connects on the second attempt" do
+        before do
+          allow(request).to receive(:exec).and_wrap_original do |original, *args|
+            if @attempted.nil?
+              @attempted = true
+              raise Net::ReadTimeout
+            end
+
+            original.call(*args)
+          end
+
+          body
+        end
+
+        it "retries" do
+          expect(request).to have_received(:exec).twice
+        end
+
+        it { is_expected.to eq "OK" }
+
+        it "logs" do
+          expect(NetworkResiliency).to have_received(:record).with(
+            include(
+              error: nil,
+              attempts: 2,
+            ),
+          )
+        end
+      end
+    end
+  end
+
+  describe "normalize path" do
+    using NetworkResiliency::Adapter::HTTP
+
+    subject { http.normalize_path(path) }
+
+    context "when path is /" do
+      let(:path) { "/" }
+
+      it { is_expected.to eq "/" }
+    end
+
+    context "when path is /foo" do
+      let(:path) { "/foo" }
+
+      it { is_expected.to eq "/foo" }
+    end
+
+    context "when path contains an id" do
+      let(:path) { "/foo/123" }
+
+      it { is_expected.to eq "/foo/x" }
+    end
+
+    context "when path contains a uuid" do
+      let(:path) { "/foo/12345678-1234-1234-1234-123456789012/bar" }
+
+      it { is_expected.to eq "/foo/x/bar" }
     end
   end
 end

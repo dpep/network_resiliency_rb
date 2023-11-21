@@ -15,18 +15,40 @@ module NetworkResiliency
         (instance&.singleton_class || Net::HTTP).ancestors.include?(Instrumentation)
       end
 
-      module Instrumentation
-        def connect
-          return super unless NetworkResiliency.enabled?(:http)
-          original_timeout = self.open_timeout
+      ID_REGEX = %r{/[0-9]+(?=/|$)}.freeze
+      UUID_REGEX = %r`/\h{8}-\h{4}-(\h{4})-\h{4}-\h{12}(?=/|$)`.freeze
+      refine Net::HTTP do
+        def normalize_path(path)
+          path.gsub(
+            Regexp.union(
+              NetworkResiliency::Adapter::HTTP::ID_REGEX,
+              NetworkResiliency::Adapter::HTTP::UUID_REGEX,
+            ),
+            '/x',
+          )
+        end
+
+        def with_resilience(action, destination, idempotent, &block)
+          if action == :connect
+            original_timeout = self.open_timeout
+            set_timeout = ->(timeout) { self.open_timeout = timeout }
+          else
+            original_timeout = self.read_timeout
+            set_timeout = ->(timeout) { self.read_timeout = timeout }
+          end
 
           timeouts = NetworkResiliency.timeouts_for(
             adapter: "http",
-            action: "connect",
-            destination: address,
+            action: action.to_s,
+            destination: destination,
             max: original_timeout,
             units: :seconds,
           )
+
+          unless idempotent
+            # only try once, with most lenient timeout
+            timeouts = timeouts.last(1)
+          end
 
           attempts = 0
           ts = -NetworkResiliency.timestamp
@@ -35,10 +57,13 @@ module NetworkResiliency
             attempts += 1
             error = nil
 
-            self.open_timeout = timeouts.shift
+            set_timeout.call(timeouts.shift)
 
-            super
-          rescue Net::OpenTimeout => e
+            yield
+          rescue ::Timeout::Error,
+             defined?(OpenSSL::SSL) ? OpenSSL::OpenSSLError : IOError,
+             SystemCallError => e
+
             # capture error
             error = e.class
 
@@ -47,18 +72,47 @@ module NetworkResiliency
             raise
           ensure
             ts += NetworkResiliency.timestamp
-            self.open_timeout = original_timeout
+            set_timeout.call(original_timeout)
 
             NetworkResiliency.record(
               adapter: "http",
-              action: "connect",
-              destination: address,
-              error: error,
+              action: action.to_s,
+              destination: destination,
               duration: ts,
-              timeout: self.open_timeout.to_f * 1_000,
+              error: error,
+              timeout: original_timeout.to_f * 1_000,
               attempts: attempts,
             )
           end
+        end
+      end
+
+      module Instrumentation
+        using NetworkResiliency::Adapter::HTTP
+
+        def connect
+          return super unless NetworkResiliency.enabled?(:http)
+
+          with_resilience(:connect, address, true) { super }
+        end
+
+        def transport_request(req, &block)
+          return super unless NetworkResiliency.enabled?(:http)
+
+          destination = [
+            req.method.downcase,
+            address,
+            normalize_path(req.path),
+          ].join(":")
+
+          idepotent = Net::HTTP::IDEMPOTENT_METHODS_.include?(req.method)
+
+          retries = self.max_retries
+          self.max_retries = 0 # disable
+
+          with_resilience(:request, destination, idepotent) { super }
+        ensure
+          self.max_retries = retries
         end
       end
     end
