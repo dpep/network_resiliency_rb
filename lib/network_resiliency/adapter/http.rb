@@ -50,6 +50,9 @@ module NetworkResiliency
             timeouts = timeouts.last(1)
           end
 
+          original_max_retries = self.max_retries
+          self.max_retries = 0 # disable
+
           attempts = 0
           ts = -NetworkResiliency.timestamp
 
@@ -73,6 +76,7 @@ module NetworkResiliency
           ensure
             ts += NetworkResiliency.timestamp
             set_timeout.call(original_timeout)
+            self.max_retries = original_max_retries
 
             NetworkResiliency.record(
               adapter: "http",
@@ -107,12 +111,7 @@ module NetworkResiliency
 
           idepotent = Net::HTTP::IDEMPOTENT_METHODS_.include?(req.method)
 
-          retries = self.max_retries
-          self.max_retries = 0 # disable
-
           with_resilience(:request, destination, idepotent) { super }
-        ensure
-          self.max_retries = retries
         end
       end
     end

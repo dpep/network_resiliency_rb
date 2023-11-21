@@ -253,6 +253,7 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
     context "when NetworkResiliency is disabled" do
       before { NetworkResiliency.disable! }
 
+      it { expect(redis.ping).to eq "PONG" }
       it { is_expected.not_to have_received(:record) }
     end
 

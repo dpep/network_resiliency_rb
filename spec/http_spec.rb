@@ -274,6 +274,13 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
         end
       end
     end
+
+    context "when NetworkResiliency is disabled" do
+      before { NetworkResiliency.disable! }
+
+      it { is_expected.to eq "OK" }
+      it { expect(NetworkResiliency).not_to have_received(:record) }
+    end
   end
 
   describe "normalize path" do
