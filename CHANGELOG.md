@@ -1,3 +1,8 @@
+###  v0.6.0  (2023-11-21)
+- http resiliency
+- redis resilience
+- spec cleanup
+
 ###  v0.5.1  (2023-11-17)
 - support nil timeouts
 
