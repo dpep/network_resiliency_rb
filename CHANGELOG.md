@@ -1,3 +1,7 @@
+###  v0.6.1  (2023-11-21)
+- bugfix
+- redis system errors
+
 ###  v0.6.0  (2023-11-21)
 - http resiliency
 - redis resilience
