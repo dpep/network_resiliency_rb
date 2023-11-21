@@ -11,7 +11,7 @@ module Helpers
       allow(client_socket).to receive(:setsockopt)
 
       Thread.new do
-        verb, path, _ = server_socket.gets.split
+        verb, path, _ = server_socket.gets&.split
         while line = server_socket.gets and line !~ /^\s*$/
           # puts "client: #{line}"
         end
@@ -25,6 +25,7 @@ module Helpers
         server_socket.puts headers.join("\r\n")
         server_socket.puts resp
         server_socket.close
+      rescue Errno::EPIPE
       end
 
       client_socket
