@@ -87,13 +87,15 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
     it { expect(client).to be_connected }
 
     context "when server connection times out" do
-      let(:host) { "timeout" }
+      before do
+        allow(Redis::Connection::Ruby).to receive(:connect).and_raise(Redis::TimeoutError)
+      end
 
       it "raises an error" do
         expect { client }.to raise_error(Redis::CannotConnectError)
       end
 
-      it "logs timeout" do
+      it "logs the underlying error" do
         is_expected.to have_received(:record).with(
           include(error: Redis::TimeoutError),
         )
@@ -252,6 +254,18 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
       before { NetworkResiliency.disable! }
 
       it { is_expected.not_to have_received(:record) }
+    end
+
+    context "when there is a System Error" do
+      before do
+        allow(client).to receive(:read).and_raise(Errno::ETIMEDOUT)
+      end
+
+      it "logs the error" do
+        is_expected.to have_received(:record).with(
+          include(error: Errno::ETIMEDOUT),
+        )
+      end
     end
 
     describe "resilient mode" do

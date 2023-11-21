@@ -83,11 +83,15 @@ module NetworkResiliency
             @options[timeout_key] = timeouts.shift
 
             yield
-          rescue ::Redis::BaseConnectionError => e
+          rescue ::Redis::BaseConnectionError, SystemCallError => e
             # capture error
 
             # grab underlying exception within Redis wrapper
-            error = e.cause.class
+            error = if e.is_a?(::Redis::BaseConnectionError)
+              e.cause.class
+            else
+              e.class
+            end
 
             retry if timeouts.size > 0
 
