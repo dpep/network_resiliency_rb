@@ -287,13 +287,13 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
 
       context "when request succeeds on the second attempt" do
         before do
-          allow(client).to receive(:read) do
+          allow(client).to receive(:read).and_wrap_original do |original, *args|
             if @attempted.nil?
               @attempted = true
               raise Redis::TimeoutError
             end
 
-            "PONG"
+            original.call(*args)
           end
         end
 
