@@ -624,6 +624,7 @@ describe NetworkResiliency do
 
       # unstub from spec_helper
       allow(NetworkResiliency).to receive(:start_syncing).and_call_original
+      allow(NetworkResiliency::StatsEngine).to receive(:sync)
     end
 
     context "when Redis is configured" do
@@ -637,6 +638,21 @@ describe NetworkResiliency do
 
     it "can be called many times without error" do
       3.times { NetworkResiliency.send :start_syncing }
+    end
+
+    it "will stop previous workers so only one is running at a time" do
+      threads = Thread.list
+
+      workers = 3.times.map do
+        NetworkResiliency.send(:start_syncing)
+        NetworkResiliency.instance_variable_get(:@sync_worker)
+      end
+
+      workers.first(2).each { |w| w.join }
+
+      expect(Thread.list - threads).to contain_exactly(
+        NetworkResiliency.instance_variable_get(:@sync_worker),
+      )
     end
 
     context "when Redis is not configured" do
