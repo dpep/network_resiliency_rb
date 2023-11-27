@@ -17,15 +17,16 @@ module NetworkResiliency
 
       ID_REGEX = %r{/[0-9]+(?=/|$)}.freeze
       UUID_REGEX = %r`/\h{8}-\h{4}-(\h{4})-\h{4}-\h{12}(?=/|$)`.freeze
+
       refine Net::HTTP do
         def normalize_path(path)
-          path.gsub(
+          NetworkResiliency.normalize_request(:http, path).gsub(
             Regexp.union(
               NetworkResiliency::Adapter::HTTP::ID_REGEX,
               NetworkResiliency::Adapter::HTTP::UUID_REGEX,
             ),
             '/x',
-          )
+          ).gsub(%r{//+}, "/")
         end
 
         def with_resilience(action, destination, idempotent, &block)

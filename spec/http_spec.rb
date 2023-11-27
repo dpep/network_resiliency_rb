@@ -283,7 +283,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
     end
   end
 
-  describe "normalize path" do
+  describe ".normalize_path" do
     using NetworkResiliency::Adapter::HTTP
 
     subject { http.normalize_path(path) }
@@ -310,6 +310,26 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       let(:path) { "/foo/12345678-1234-1234-1234-123456789012/bar" }
 
       it { is_expected.to eq "/foo/x/bar" }
+    end
+
+    context "when path contains duplicate slashes" do
+      let(:path) { "//foo///123" }
+
+      it { is_expected.to eq "/foo/x" }
+    end
+
+    context "when NetworkResiliency configured with custom normalization" do
+      before do
+        NetworkResiliency.configure do |c|
+          c.normalize_request(:http) do |path|
+            path.sub "foo", "bar"
+          end
+        end
+      end
+
+      let(:path) { "/foo/123" }
+
+      it { is_expected.to eq "/bar/x" }
     end
   end
 end

@@ -637,4 +637,43 @@ describe NetworkResiliency do
       described_class.reset
     end
   end
+
+  describe ".normalize_request" do
+    before do
+      described_class.normalize_request(:http) do |path|
+        path.gsub /oo+/, "oo"
+      end
+
+      described_class.normalize_request(:http) do |path|
+        path.gsub /_\d+$/, "_x"
+      end
+    end
+
+    let(:path) { "/fooooo_123" }
+
+    it "normalizes the request" do
+      expect(described_class.normalize_request(:http, path)).to eq "/foo_x"
+    end
+
+    it "can be cleared" do
+      described_class.normalize_request(:http).clear
+      expect(described_class.normalize_request(:http, path)).to eq path
+    end
+
+    context "when an invalid adapter is specified" do
+      it "fails" do
+        expect {
+          described_class.normalize_request(:foo, path)
+      }.to raise_error(ArgumentError)
+      end
+    end
+
+    context "when both a request and block are specified" do
+      it "fails" do
+        expect {
+          described_class.normalize_request(:http, path) { |p| p }
+      }.to raise_error(ArgumentError)
+      end
+    end
+  end
 end

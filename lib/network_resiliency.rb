@@ -15,6 +15,7 @@ module NetworkResiliency
     autoload :Postgres, "network_resiliency/adapter/postgres"
   end
 
+  ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres ].freeze
   MODE = [ :observe, :resilient ].freeze
   RESILIENCY_SIZE_THRESHOLD = 1_000
 
@@ -101,6 +102,28 @@ module NetworkResiliency
     end
 
     @mode = mode
+  end
+
+  def normalize_request(adapter, request = nil, &block)
+    unless ADAPTERS.include?(adapter)
+      raise ArgumentError, "invalid adapter: #{adapter}"
+    end
+
+    if request && block_given?
+      raise ArgumentError, "specify request or block, but not both"
+    end
+
+    @normalize_request ||= {}
+    @normalize_request[adapter] ||= []
+    @normalize_request[adapter] << block if block_given?
+
+    if request
+      @normalize_request[adapter].reduce(request) do |req, block|
+        block.call(req)
+      end
+    else
+      @normalize_request[adapter]
+    end
   end
 
   # private
@@ -291,6 +314,7 @@ module NetworkResiliency
   def reset
     @enabled = nil
     @mode = nil
+    @normalize_request = nil
     Thread.current["network_resiliency"] = nil
     StatsEngine.reset
     Syncer.stop
