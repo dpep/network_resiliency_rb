@@ -209,6 +209,20 @@ describe NetworkResiliency do
       expect_enabled.to be false
       expect(NetworkResiliency.mode).to be :resilient
     end
+
+    it "will start syncing" do
+      NetworkResiliency.configure
+      expect(NetworkResiliency::Syncer).to have_received(:start)
+    end
+
+    context "when Redis is not configured" do
+      before { NetworkResiliency.redis = nil }
+
+      it "will not start syncing" do
+        NetworkResiliency.configure
+        expect(NetworkResiliency::Syncer).not_to have_received(:start)
+      end
+    end
   end
 
   describe ".mode" do
@@ -617,57 +631,10 @@ describe NetworkResiliency do
     end
   end
 
-  describe ".start_syncing" do
-    before do
-      # mocking not supported in Threads
-      NetworkResiliency.statsd = nil
-
-      # unstub from spec_helper
-      allow(NetworkResiliency).to receive(:start_syncing).and_call_original
-      allow(NetworkResiliency::StatsEngine).to receive(:sync)
-    end
-
-    context "when Redis is configured" do
-      it { expect(NetworkResiliency.redis).to be }
-
-      it "will be called by .configure" do
-        NetworkResiliency.configure
-        expect(NetworkResiliency).to have_received(:start_syncing)
-      end
-    end
-
-    it "can be called many times without error" do
-      3.times { NetworkResiliency.send :start_syncing }
-    end
-
-    it "will stop previous workers so only one is running at a time" do
-      threads = Thread.list
-
-      workers = 3.times.map do
-        NetworkResiliency.send(:start_syncing)
-        NetworkResiliency.instance_variable_get(:@sync_worker)
-      end
-
-      workers.first(2).each { |w| w.join }
-
-      expect(Thread.list - threads).to contain_exactly(
-        NetworkResiliency.instance_variable_get(:@sync_worker),
-      )
-    end
-
-    context "when Redis is not configured" do
-      before { NetworkResiliency.redis = nil }
-
-      it "raises an error" do
-        expect {
-          NetworkResiliency.send :start_syncing
-        }.to raise_error(/Redis/)
-      end
-
-      it "does not get called from .configure" do
-        NetworkResiliency.configure
-        expect(NetworkResiliency).not_to have_received(:start_syncing)
-      end
+  describe ".reset" do
+    it "stop syncing" do
+      expect(NetworkResiliency::Syncer).to receive(:stop)
+      described_class.reset
     end
   end
 end

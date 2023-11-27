@@ -45,7 +45,7 @@ RSpec.configure do |config|
     end
 
     # disable background sync
-    allow(NetworkResiliency).to receive(:start_syncing)
+    allow(NetworkResiliency::Syncer).to receive(:start)
 
     # since Timecop doesn't work with Process.clock_gettime
     allow(Process).to receive(:clock_gettime).and_return(*(1..1_000))

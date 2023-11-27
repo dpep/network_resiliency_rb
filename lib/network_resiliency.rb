@@ -1,6 +1,7 @@
 require "network_resiliency/refinements"
 require "network_resiliency/stats"
 require "network_resiliency/stats_engine"
+require "network_resiliency/syncer"
 require "network_resiliency/version"
 
 using NetworkResiliency::Refinements
@@ -24,7 +25,7 @@ module NetworkResiliency
   def configure
     yield self if block_given?
 
-    start_syncing if redis
+    Syncer.start(redis) if redis
   end
 
   def patch(*adapters)
@@ -292,30 +293,12 @@ module NetworkResiliency
     @mode = nil
     Thread.current["network_resiliency"] = nil
     StatsEngine.reset
-
-    if @sync_worker
-      @sync_worker.kill
-      @sync_worker = nil
-    end
+    Syncer.stop
   end
 
   # private
 
   def thread_state
     Thread.current["network_resiliency"] ||= {}
-  end
-
-  def start_syncing
-    @sync_worker.kill if @sync_worker
-
-    raise "Redis not configured" unless redis
-
-    @sync_worker = Thread.new do
-      loop do
-        StatsEngine.sync(redis)
-
-        sleep(3)
-      end
-    end
   end
 end
