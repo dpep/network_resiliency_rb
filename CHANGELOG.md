@@ -1,3 +1,6 @@
+###  v0.6.3  (2023-11-27)
+- custom request normalization
+
 ###  v0.6.2  (2023-11-26)
 - syncer
 - redis without_reconnect
