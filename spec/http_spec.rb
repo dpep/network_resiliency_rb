@@ -321,7 +321,11 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
     context "when NetworkResiliency configured with custom normalization" do
       before do
         NetworkResiliency.configure do |c|
-          c.normalize_request(:http) do |path|
+          c.normalize_request(:http) do |path, host:|
+            if host.include?("example")
+              path += "/example"
+            end
+
             path.sub "foo", "bar"
           end
         end
@@ -329,7 +333,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
 
       let(:path) { "/foo/123" }
 
-      it { is_expected.to eq "/bar/x" }
+      it { is_expected.to eq "/bar/x/example" }
     end
   end
 end

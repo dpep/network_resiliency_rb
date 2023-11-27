@@ -660,10 +660,35 @@ describe NetworkResiliency do
       expect(described_class.normalize_request(:http, path)).to eq path
     end
 
+    context "when request context is utilized" do
+      let(:host) { "example.com" }
+
+      before do
+        described_class.normalize_request(:http) do |path, host:|
+          if host == "example.com"
+            path = "/example"
+          end
+        end
+      end
+
+      it "takes the context into account" do
+        res = described_class.normalize_request(:http, path, host: host)
+        expect(res).to eq "/example"
+      end
+
+      context "when context is specified without a request" do
+        it "fails" do
+          expect {
+            described_class.normalize_request(:http, host: host)
+          }.to raise_error(ArgumentError)
+        end
+      end
+    end
+
     context "when an invalid adapter is specified" do
       it "fails" do
         expect {
-          described_class.normalize_request(:foo, path)
+          described_class.normalize_request(:foo)
       }.to raise_error(ArgumentError)
       end
     end
@@ -671,7 +696,7 @@ describe NetworkResiliency do
     context "when both a request and block are specified" do
       it "fails" do
         expect {
-          described_class.normalize_request(:http, path) { |p| p }
+          described_class.normalize_request(:http, path) { nil }
       }.to raise_error(ArgumentError)
       end
     end

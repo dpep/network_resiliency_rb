@@ -20,7 +20,7 @@ module NetworkResiliency
 
       refine Net::HTTP do
         def normalize_path(path)
-          NetworkResiliency.normalize_request(:http, path).gsub(
+          NetworkResiliency.normalize_request(:http, path, host: address).gsub(
             Regexp.union(
               NetworkResiliency::Adapter::HTTP::ID_REGEX,
               NetworkResiliency::Adapter::HTTP::UUID_REGEX,

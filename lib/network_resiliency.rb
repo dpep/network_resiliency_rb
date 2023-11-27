@@ -104,7 +104,7 @@ module NetworkResiliency
     @mode = mode
   end
 
-  def normalize_request(adapter, request = nil, &block)
+  def normalize_request(adapter, request = nil, **context, &block)
     unless ADAPTERS.include?(adapter)
       raise ArgumentError, "invalid adapter: #{adapter}"
     end
@@ -113,13 +113,17 @@ module NetworkResiliency
       raise ArgumentError, "specify request or block, but not both"
     end
 
+    if request.nil? && !context.empty?
+      raise ArgumentError, "can not speficy context without request"
+    end
+
     @normalize_request ||= {}
     @normalize_request[adapter] ||= []
     @normalize_request[adapter] << block if block_given?
 
     if request
       @normalize_request[adapter].reduce(request) do |req, block|
-        block.call(req)
+        block.call(req, **context)
       end
     else
       @normalize_request[adapter]
