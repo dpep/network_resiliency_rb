@@ -1,3 +1,7 @@
+###  v0.6.2  (2023-11-26)
+- syncer
+- redis without_reconnect
+
 ###  v0.6.1  (2023-11-21)
 - bugfix
 - redis system errors
