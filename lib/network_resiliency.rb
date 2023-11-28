@@ -15,6 +15,7 @@ module NetworkResiliency
     autoload :Postgres, "network_resiliency/adapter/postgres"
   end
 
+  ACTIONS = [ :connect, :request ].freeze
   ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres ].freeze
   MODE = [ :observe, :resilient ].freeze
   RESILIENCY_SIZE_THRESHOLD = 1_000
@@ -92,16 +93,40 @@ module NetworkResiliency
     Process.clock_gettime(Process::CLOCK_MONOTONIC) * 1_000
   end
 
-  def mode
-    @mode || :observe
+  def mode(action)
+    unless ACTIONS.include?(action)
+      raise ArgumentError, "invalid NetworkResiliency action: #{action}"
+    end
+
+    (@mode && @mode[action]) || :observe
   end
 
   def mode=(mode)
-    unless MODE.include?(mode)
-      raise ArgumentError, "invalid NetworkResiliency mode: #{mode}"
+    @mode = {}
+
+    if mode.is_a?(Hash)
+      invalid = mode.keys - ACTIONS
+
+      unless invalid.empty?
+        raise ArgumentError, "invalid actions for mode: #{invalid}"
+      end
+
+      mode.each do |action, mode|
+        unless MODE.include?(mode)
+          raise ArgumentError, "invalid NetworkResiliency mode for #{action}: #{mode}"
+        end
+
+        @mode[action] = mode
+      end
+    else
+      unless MODE.include?(mode)
+        raise ArgumentError, "invalid NetworkResiliency mode: #{mode}"
+      end
+
+      ACTIONS.each { |action| @mode[action] = mode }
     end
 
-    @mode = mode
+    @mode.freeze
   end
 
   def normalize_request(adapter, request = nil, **context, &block)
@@ -236,7 +261,7 @@ module NetworkResiliency
   def timeouts_for(adapter:, action:, destination:, max: nil, units: :ms)
     default = [ max ]
 
-    return default if NetworkResiliency.mode == :observe
+    return default if NetworkResiliency.mode(action.to_sym) == :observe
 
     key = [ adapter, action, destination ].join(":")
     stats = StatsEngine.get(key)
@@ -282,7 +307,7 @@ module NetworkResiliency
     else
       timeouts << p99
 
-      # timeouts << p99 * 10 if NetworkResiliency.mode == :resolute
+      # timeouts << p99 * 10 if NetworkResiliency.mode(action) == :resolute
 
       # unbounded second attempt
       timeouts << nil

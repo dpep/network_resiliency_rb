@@ -207,7 +207,7 @@ describe NetworkResiliency do
       end
 
       expect_enabled.to be false
-      expect(NetworkResiliency.mode).to be :resilient
+      expect(NetworkResiliency.mode(:connect)).to be :resilient
     end
 
     it "will start syncing" do
@@ -226,7 +226,7 @@ describe NetworkResiliency do
   end
 
   describe ".mode" do
-    subject { NetworkResiliency.mode }
+    subject { NetworkResiliency.mode(:connect) }
 
     it "defaults to observe" do
       is_expected.to be :observe
@@ -242,6 +242,10 @@ describe NetworkResiliency do
       expect {
         NetworkResiliency.mode = :foo
       }.to raise_error(ArgumentError)
+
+      expect {
+        NetworkResiliency.mode(:foo)
+      }.to raise_error(ArgumentError)
     end
 
     it "resets" do
@@ -249,6 +253,26 @@ describe NetworkResiliency do
       NetworkResiliency.reset
 
       is_expected.to be :observe
+    end
+
+    context "when actions set to different modes" do
+      before do
+        NetworkResiliency.mode = { connect: :resilient }
+      end
+
+      it { is_expected.to be :resilient }
+
+      it { expect(NetworkResiliency.mode(:request)).to be :observe }
+
+      it "fails fast on invalid input" do
+        expect {
+          NetworkResiliency.mode = { connect: :foo }
+        }.to raise_error(ArgumentError)
+
+        expect {
+          NetworkResiliency.mode = { conn: :observe }
+        }.to raise_error(ArgumentError)
+      end
     end
   end
 
