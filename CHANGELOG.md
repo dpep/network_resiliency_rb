@@ -1,3 +1,6 @@
+###  v0.6.5  (2023-11-28)
+- per action modes
+
 ###  v0.6.4  (2023-11-27)
 - request normalization context
 
