@@ -251,7 +251,7 @@ module NetworkResiliency
     warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
   end
 
-  IP_ADDRESS_REGEX = Regexp.new(/\d{1,3}(\.\d{1,3}){3}/)
+  IP_ADDRESS_REGEX = /\d{1,3}(\.\d{1,3}){3}/
 
   def ignore_destination?(adapter, action, destination)
     # filter raw IP addresses
