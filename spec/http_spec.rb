@@ -1,6 +1,6 @@
 describe NetworkResiliency::Adapter::HTTP, :mock_socket do
   let(:http) { Net::HTTP.new(uri.host) }
-  let(:uri) { URI('http://example.com/') }
+  let(:uri) { URI('http://example.com/foo?x=1&y=1') }
 
   before do
     allow(NetworkResiliency).to receive(:record)
@@ -44,7 +44,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       NetworkResiliency
     end
 
-    let(:body) { http.get("/").body }
+    let(:body) { http.get(uri).body }
 
     before do
       described_class.patch(http)
@@ -146,7 +146,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       http.request(request).body rescue Net::ReadTimeout
     end
 
-    let(:request) { Net::HTTP::Get.new(uri.path) }
+    let(:request) { Net::HTTP::Get.new(uri) }
 
     before do
       described_class.patch(http)
@@ -168,6 +168,14 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
 
     it "completes request" do
       is_expected.to eq "OK"
+    end
+
+    it "normalizes the path" do
+      body
+
+      expect(NetworkResiliency).to have_received(:record).with(include(action: "request")) do |destination:, **|
+        expect(destination).not_to include "?"
+      end
     end
 
     describe "resilient mode" do

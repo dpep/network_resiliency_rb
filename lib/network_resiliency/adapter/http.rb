@@ -104,10 +104,13 @@ module NetworkResiliency
         def transport_request(req, &block)
           return super unless NetworkResiliency.enabled?(:http)
 
+          # strip query params
+          path = URI.parse(req.path).path
+
           destination = [
             address,
             req.method.downcase,
-            normalize_path(req.path),
+            normalize_path(path),
           ].join(":")
 
           idepotent = Net::HTTP::IDEMPOTENT_METHODS_.include?(req.method)
