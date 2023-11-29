@@ -105,8 +105,8 @@ module NetworkResiliency
           return super unless NetworkResiliency.enabled?(:http)
 
           destination = [
-            req.method.downcase,
             address,
+            req.method.downcase,
             normalize_path(req.path),
           ].join(":")
 

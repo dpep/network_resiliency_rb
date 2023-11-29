@@ -158,7 +158,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       expect(NetworkResiliency).to have_received(:record).with(
         adapter: "http",
         action: "request",
-        destination: "get:#{uri.host}:#{uri.path}",
+        destination: "#{uri.host}:get:#{uri.path}",
         duration: be_a(Integer),
         error: nil,
         timeout: be_a(Numeric),
