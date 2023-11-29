@@ -1,3 +1,7 @@
+###  v0.6.6  (2023-11-29)
+- path normalization
+- http destination ordering
+
 ###  v0.6.5  (2023-11-28)
 - per action modes
 
