@@ -1,3 +1,6 @@
+###  v0.6.8  (2023-12-04)
+- slim metrics
+
 ###  v0.6.7  (2023-12-04)
 - auto patch
 - adapter stubbing
