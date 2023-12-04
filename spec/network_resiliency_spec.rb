@@ -403,17 +403,8 @@ describe NetworkResiliency do
       it "tracks successful retries" do
         is_expected.to have_received(:increment).with(
           "network_resiliency.#{action}.resilient",
-          anything,
         )
       end
-    end
-
-    it "captures order of magnitude info" do
-      is_expected.to have_received(:distribution).with(
-        "network_resiliency.#{action}.magnitude",
-        10,
-        anything,
-      )
     end
 
     context "when host is a raw IP address" do

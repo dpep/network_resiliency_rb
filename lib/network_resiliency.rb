@@ -181,16 +181,6 @@ module NetworkResiliency
       }.compact,
     )
 
-    NetworkResiliency.statsd&.distribution(
-      "network_resiliency.#{action}.magnitude",
-      duration.order_of_magnitude(ceil: true),
-      tags: {
-        adapter: adapter,
-        destination: destination,
-        error: error,
-      }.compact,
-    )
-
     NetworkResiliency.statsd&.gauge(
       "network_resiliency.#{action}.timeout",
       timeout,
@@ -208,18 +198,8 @@ module NetworkResiliency
           adapter: adapter,
           destination: destination,
         },
-      ) if timeout && timeout > 0
+      ) if timeout && timeout > duration
     else
-      # track successful retries
-      NetworkResiliency.statsd&.increment(
-        "network_resiliency.#{action}.resilient",
-        tags: {
-          adapter: adapter,
-          destination: destination,
-          attempts: attempts,
-        },
-      ) if attempts > 1
-
       # record stats
       key = [ adapter, action, destination ].join(":")
       stats = StatsEngine.add(key, duration)
