@@ -32,6 +32,7 @@ RSpec.configure do |config|
     NetworkResiliency.reset
 
     NetworkResiliency.redis = Redis.new
+    NetworkResiliency.redis.flushall
 
     NetworkResiliency.statsd = instance_double(Datadog::Statsd)
     allow(NetworkResiliency.statsd).to receive(:distribution)
@@ -49,8 +50,6 @@ RSpec.configure do |config|
 
     # since Timecop doesn't work with Process.clock_gettime
     allow(Process).to receive(:clock_gettime).and_return(*(1..1_000))
-
-    Redis.new.flushall rescue nil
 
     # stub adapters so patches reset after each example
     stub_const("Mysql2::Client", Class.new(Mysql2::Client))
