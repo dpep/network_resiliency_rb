@@ -51,6 +51,12 @@ RSpec.configure do |config|
     allow(Process).to receive(:clock_gettime).and_return(*(1..1_000))
 
     Redis.new.flushall rescue nil
+
+    # stub adapters so patches reset after each example
+    stub_const("Mysql2::Client", Class.new(Mysql2::Client))
+    stub_const("Net::HTTP", Class.new(Net::HTTP))
+    stub_const("PG::Connection", Class.new(PG::Connection))
+    stub_const("Redis::Client", Class.new(Redis::Client))
   end
 end
 

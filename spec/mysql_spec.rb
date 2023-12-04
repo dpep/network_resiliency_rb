@@ -1,10 +1,4 @@
 describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
-  before do
-    stub_const("Mysql2::Client", klass_mock)
-  end
-
-  let(:klass_mock) { Class.new(Mysql2::Client) }
-
   describe ".patch" do
     subject do
       described_class.patched?
@@ -14,18 +8,17 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
 
     context "when patched" do
       before do
-        allow(klass_mock).to receive(:prepend).and_call_original
+        allow(Mysql2::Client).to receive(:prepend).and_call_original
         described_class.patch
       end
 
       it { is_expected.to be true }
 
       it "will only patch once" do
-        expect(klass_mock).to have_received(:prepend).once
-
+        described_class.patch
         described_class.patch
 
-        expect(klass_mock).to have_received(:prepend).once
+        expect(Mysql2::Client).to have_received(:prepend).once
       end
     end
   end
@@ -85,8 +78,8 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
     end
 
     context "when server connection times out" do
-      let(:klass_mock) do
-        Class.new(Mysql2::Client) do
+      before do
+        Mysql2::Client.class_eval do
           def connect(...)
             raise Mysql2::Error::TimeoutError.new("fake timeout", nil, error_number = 1205)
           end

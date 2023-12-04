@@ -16,13 +16,6 @@ describe NetworkResiliency do
     let(:http) { Net::HTTP.new("example.com") }
     let(:redis) { Redis.new }
 
-    before do
-      stub_const("Mysql2::Client", Class.new(Mysql2::Client))
-      stub_const("Net::HTTP", Class.new(Net::HTTP))
-      stub_const("PG::Connection", Class.new(PG::Connection))
-      stub_const("Redis::Client", Class.new(Redis::Client))
-    end
-
     context "with HTTP" do
       subject { NetworkResiliency::Adapter::HTTP.patched?(http) }
 

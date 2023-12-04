@@ -19,8 +19,6 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
 
     context "when patching globally" do
       before do
-        stub_const("Redis::Client", Class.new(Redis::Client))
-
         described_class.patch
       end
 

@@ -1,10 +1,4 @@
 describe NetworkResiliency::Adapter::Postgres do
-  before do
-    stub_const("PG::Connection", klass_mock)
-  end
-
-  let(:klass_mock) { Class.new(PG::Connection) }
-
   describe ".patch" do
     subject do
       described_class.patched?
@@ -14,18 +8,17 @@ describe NetworkResiliency::Adapter::Postgres do
 
     context "when patched" do
       before do
-        allow(klass_mock.singleton_class).to receive(:prepend).and_call_original
+        allow(PG::Connection.singleton_class).to receive(:prepend).and_call_original
         described_class.patch
       end
 
       it { is_expected.to be true }
 
       it "will only patch once" do
-        expect(klass_mock.singleton_class).to have_received(:prepend).once
-
+        described_class.patch
         described_class.patch
 
-        expect(klass_mock.singleton_class).to have_received(:prepend).once
+        expect(PG::Connection.singleton_class).to have_received(:prepend).once
       end
     end
   end
@@ -65,8 +58,8 @@ describe NetworkResiliency::Adapter::Postgres do
     end
 
     context "when server connection times out" do
-      let(:klass_mock) do
-        Class.new(PG::Connection) do
+      before do
+        PG::Connection.class_eval do
           def self.connect_start(...)
             raise PG::Error.new
           end
