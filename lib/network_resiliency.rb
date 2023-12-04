@@ -28,6 +28,14 @@ module NetworkResiliency
     yield self if block_given?
 
     Syncer.start(redis) if redis
+
+    unless @patched
+      # patch everything that's available
+      ADAPTERS.each do |adapter|
+        patch(adapter)
+      rescue LoadError, NotImplementedError
+      end
+    end
   end
 
   def patch(*adapters)
@@ -45,6 +53,8 @@ module NetworkResiliency
         raise NotImplementedError
       end
     end
+
+    @patched = true
   end
 
   def enabled?(adapter)
@@ -344,6 +354,7 @@ module NetworkResiliency
     @enabled = nil
     @mode = nil
     @normalize_request = nil
+    @patched = nil
     Thread.current["network_resiliency"] = nil
     StatsEngine.reset
     Syncer.stop

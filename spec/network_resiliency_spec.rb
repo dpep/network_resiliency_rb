@@ -203,6 +203,40 @@ describe NetworkResiliency do
       expect(NetworkResiliency.mode(:connect)).to be :resilient
     end
 
+    it "patches all available adapters by default" do
+      NetworkResiliency.configure
+
+      expect(NetworkResiliency::Adapter::HTTP.patched?).to be true
+      expect(NetworkResiliency::Adapter::Redis.patched?).to be true
+    end
+
+    it "will not patch adapters if some were already patched" do
+      NetworkResiliency.configure do |conf|
+        conf.patch(:http)
+      end
+
+      expect(NetworkResiliency::Adapter::HTTP.patched?).to be true
+      expect(NetworkResiliency::Adapter::Redis.patched?).to be false
+    end
+
+    it "will not patch adapters that aren't available" do
+      expect(NetworkResiliency::Adapter::HTTP).to receive(:patch).and_raise(LoadError)
+
+      expect { NetworkResiliency.configure }.not_to raise_error
+
+      expect(NetworkResiliency::Adapter::HTTP.patched?).to be false
+      expect(NetworkResiliency::Adapter::Redis.patched?).to be true
+    end
+
+    it "is possible to avoid patching" do
+      NetworkResiliency.configure do |conf|
+        conf.patch
+      end
+
+      expect(NetworkResiliency::Adapter::HTTP.patched?).to be false
+      expect(NetworkResiliency::Adapter::Redis.patched?).to be false
+    end
+
     it "will start syncing" do
       NetworkResiliency.configure
       expect(NetworkResiliency::Syncer).to have_received(:start)
