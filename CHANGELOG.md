@@ -1,3 +1,7 @@
+###  v0.6.7  (2023-12-04)
+- auto patch
+- adapter stubbing
+
 ###  v0.6.6  (2023-11-29)
 - path normalization
 - http destination ordering
