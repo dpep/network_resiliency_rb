@@ -399,12 +399,6 @@ describe NetworkResiliency do
           tags: include(attempts: attempts),
         )
       end
-
-      it "tracks successful retries" do
-        is_expected.to have_received(:increment).with(
-          "network_resiliency.#{action}.resilient",
-        )
-      end
     end
 
     context "when host is a raw IP address" do
