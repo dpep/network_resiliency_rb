@@ -13,9 +13,6 @@ require "network_resiliency"
 
 NetworkResiliency.configure do |conf|
   conf.statsd = Datadog::Statsd.new
-
-  # patch Redis instances
-  conf.patch :redis
 end
 
 Redis.new.ping
