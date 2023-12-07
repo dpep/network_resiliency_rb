@@ -5,6 +5,8 @@ module NetworkResiliency
     module HTTP
       extend self
 
+      REQUEST_TIMEOUT_HEADER = "X-Request-Timeout"
+
       def patch(instance = nil)
         return if patched?(instance)
 
@@ -61,9 +63,10 @@ module NetworkResiliency
             attempts += 1
             error = nil
 
-            set_timeout.call(timeouts.shift)
+            timeout = timeouts.shift
+            set_timeout.call(timeout)
 
-            yield
+            yield timeout
           rescue ::Timeout::Error,
              defined?(OpenSSL::SSL) ? OpenSSL::OpenSSLError : IOError,
              SystemCallError => e
@@ -115,7 +118,12 @@ module NetworkResiliency
 
           idepotent = Net::HTTP::IDEMPOTENT_METHODS_.include?(req.method)
 
-          with_resilience(:request, destination, idepotent) { super }
+          with_resilience(:request, destination, idepotent) do |timeout|
+            # send timeout via headers
+            req[REQUEST_TIMEOUT_HEADER] = timeout
+
+            super
+          end
         end
       end
     end

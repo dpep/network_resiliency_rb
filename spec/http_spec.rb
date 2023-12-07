@@ -281,6 +281,13 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       end
     end
 
+    it "sends the timeout via header" do
+      response_headers = http.request(request).each_capitalized.to_h
+      expect(response_headers).to include(
+        described_class::REQUEST_TIMEOUT_HEADER => http.read_timeout.to_s,
+      )
+    end
+
     context "when NetworkResiliency is disabled" do
       before { NetworkResiliency.disable! }
 
