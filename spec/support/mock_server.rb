@@ -12,18 +12,24 @@ module Helpers
 
       Thread.new do
         verb, path, _ = server_socket.gets&.split
+        request_headers = []
         while line = server_socket.gets and line !~ /^\s*$/
           # puts "client: #{line}"
+
+          request_headers << line.strip if line.start_with?("X-")
         end
 
         sleep $1.to_f if path =~ %r{/timeout/(\d+)}
 
         resp = "OK"
         headers = [
-          "http/1.1 200 ok",
+          "HTTP/1.1 200 OK",
           # "content-type: text/html; charset=iso-8859-1",
-          "content-length: #{resp.length}\r\n\r\n",
-        ]
+          (request_headers.join("\r\n") unless request_headers.empty?),
+          "content-length: #{resp.length}",
+          "\r\n",
+        ].compact
+
         server_socket.puts headers.join("\r\n")
         server_socket.puts resp
         server_socket.close
