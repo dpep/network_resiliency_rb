@@ -1,3 +1,7 @@
+###  v0.6.9  (2023-12-07)
+- tag mode
+- request timeout header
+
 ###  v0.6.8  (2023-12-04)
 - slim metrics
 
