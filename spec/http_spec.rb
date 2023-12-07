@@ -146,6 +146,14 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
 
     let(:request) { Net::HTTP::Get.new(uri) }
 
+    def inspect_request
+      expect(request).to receive(:exec).and_wrap_original do |original, *args|
+        yield
+
+        original.call(*args)
+      end
+    end
+
     before do
       described_class.patch(http)
     end
@@ -190,7 +198,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       it { expect(timeouts.first).not_to eq default_timeout }
 
       it "dynamically adjusts the timeout" do
-        expect(request).to receive(:exec).and_call_original do
+        inspect_request do
           expect(http.read_timeout).to eq timeouts.first
         end
 
@@ -206,7 +214,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       it "dynamically adjusts max_retries" do
         http.max_retries = 2
 
-        expect(request).to receive(:exec).and_call_original do
+        inspect_request do
           expect(http.max_retries).to eq 0
         end
 
@@ -241,7 +249,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
           end
 
           it "uses the most lenient timeout" do
-            expect(request).to receive(:exec).and_call_original do
+            inspect_request do
               expect(http.read_timeout).to eq timeouts.last
             end
 
@@ -282,10 +290,11 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
     end
 
     it "sends the timeout via header" do
-      response_headers = http.request(request).each_capitalized.to_h
-      expect(response_headers).to include(
-        described_class::REQUEST_TIMEOUT_HEADER => http.read_timeout.to_s,
-      )
+      inspect_request do
+        expect(request[described_class::REQUEST_TIMEOUT_HEADER]).to eq http.read_timeout.to_s
+      end
+
+      subject
     end
 
     context "when NetworkResiliency is disabled" do
