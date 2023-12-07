@@ -351,6 +351,14 @@ describe NetworkResiliency do
       )
     end
 
+    it "captures the mode" do
+      is_expected.to have_received(:distribution).with(
+        "network_resiliency.#{action}",
+        duration,
+        tags: include(mode: :observe),
+      )
+    end
+
     context "when timeout is nil" do
       let(:timeout) { nil }
 
