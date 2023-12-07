@@ -318,7 +318,7 @@ describe NetworkResiliency do
       NetworkResiliency.statsd
     end
 
-    let(:action) { "connect" }
+    let(:action) { :connect }
     let(:error) { nil }
     let(:duration) { 8 }
     let(:host) { "example.com" }

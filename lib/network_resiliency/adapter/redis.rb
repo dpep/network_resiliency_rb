@@ -61,8 +61,8 @@ module NetworkResiliency
           original_timeout = @options[timeout_key]
 
           timeouts = NetworkResiliency.timeouts_for(
-            adapter: "redis",
-            action: action.to_s,
+            adapter: :redis,
+            action: action,
             destination: destination,
             max: @options[timeout_key],
             units: :seconds,
@@ -101,8 +101,8 @@ module NetworkResiliency
             @options[timeout_key] = original_timeout
 
             NetworkResiliency.record(
-              adapter: "redis",
-              action: action.to_s,
+              adapter: :redis,
+              action: action,
               destination: destination,
               duration: ts,
               error: error,

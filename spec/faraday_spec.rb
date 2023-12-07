@@ -20,8 +20,8 @@ describe NetworkResiliency::Adapter::Faraday, :mock_socket do
 
     it "logs connection" do
       is_expected.to have_received(:record).with(
-        adapter: "http",
-        action: "connect",
+        adapter: :http,
+        action: :connect,
         destination: uri.host,
         duration: be_a(Integer),
         error: nil,

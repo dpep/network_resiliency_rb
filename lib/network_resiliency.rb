@@ -177,7 +177,7 @@ module NetworkResiliency
         adapter: adapter,
         destination: destination,
         error: error,
-        mode: mode(action.to_sym),
+        mode: mode(action),
         attempts: (attempts if attempts > 1),
       }.compact,
     )

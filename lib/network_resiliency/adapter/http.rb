@@ -41,8 +41,8 @@ module NetworkResiliency
           end
 
           timeouts = NetworkResiliency.timeouts_for(
-            adapter: "http",
-            action: action.to_s,
+            adapter: :http,
+            action: action,
             destination: destination,
             max: original_timeout,
             units: :seconds,
@@ -83,8 +83,8 @@ module NetworkResiliency
             self.max_retries = original_max_retries
 
             NetworkResiliency.record(
-              adapter: "http",
-              action: action.to_s,
+              adapter: :http,
+              action: action,
               destination: destination,
               duration: ts,
               error: error,

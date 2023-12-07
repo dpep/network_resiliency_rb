@@ -31,8 +31,8 @@ module NetworkResiliency
             ts += NetworkResiliency.timestamp
 
             NetworkResiliency.record(
-              adapter: "mysql",
-              action: "connect",
+              adapter: :mysql,
+              action: :connect,
               destination: host,
               error: e&.class,
               duration: ts,

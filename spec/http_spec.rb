@@ -50,8 +50,8 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
 
     it "logs connection" do
       is_expected.to have_received(:record).with(
-        adapter: "http",
-        action: "connect",
+        adapter: :http,
+        action: :connect,
         destination: uri.host,
         duration: be_a(Integer),
         error: nil,
@@ -162,8 +162,8 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       body
 
       expect(NetworkResiliency).to have_received(:record).with(
-        adapter: "http",
-        action: "request",
+        adapter: :http,
+        action: :request,
         destination: "#{uri.host}:get:#{uri.path}",
         duration: be_a(Integer),
         error: nil,
@@ -179,7 +179,7 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
     it "normalizes the path" do
       body
 
-      expect(NetworkResiliency).to have_received(:record).with(include(action: "request")) do |destination:, **|
+      expect(NetworkResiliency).to have_received(:record).with(include(action: :request)) do |destination:, **|
         expect(destination).not_to include "?"
       end
     end

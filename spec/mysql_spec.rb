@@ -48,8 +48,8 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
 
     it "logs connection" do
       is_expected.to have_received(:record).with(
-        adapter: "mysql",
-        action: "connect",
+        adapter: :mysql,
+        action: :connect,
         destination: host,
         duration: be_a(Integer),
         error: nil,

@@ -72,8 +72,8 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
 
     it "logs connection" do
       is_expected.to have_received(:record).with(
-        adapter: "redis",
-        action: "connect",
+        adapter: :redis,
+        action: :connect,
         destination: host,
         duration: be_a(Numeric),
         error: nil,
@@ -231,8 +231,8 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
 
     it "logs connection" do
       is_expected.to have_received(:record).with(
-        adapter: "redis",
-        action: "request",
+        adapter: :redis,
+        action: :request,
         destination: "#{host}:ping",
         duration: be_a(Numeric),
         error: nil,
@@ -242,8 +242,8 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
     end
 
     it "logs both connect and request" do
-      is_expected.to have_received(:record).with(include(action: "connect"))
-      is_expected.to have_received(:record).with(include(action: "request"))
+      is_expected.to have_received(:record).with(include(action: :connect))
+      is_expected.to have_received(:record).with(include(action: :request))
     end
 
     it { expect(redis.ping).to eq "PONG" }

@@ -48,8 +48,8 @@ describe NetworkResiliency::Adapter::Postgres do
 
     it "logs connection" do
       is_expected.to have_received(:record).with(
-        adapter: "postgres",
-        action: "connect",
+        adapter: :postgres,
+        action: :connect,
         destination: host,
         duration: be_a(Integer),
         error: nil,

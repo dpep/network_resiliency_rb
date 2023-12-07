@@ -33,8 +33,8 @@ module NetworkResiliency
             ts += NetworkResiliency.timestamp
 
             NetworkResiliency.record(
-              adapter: "postgres",
-              action: "connect",
+              adapter: :postgres,
+              action: :connect,
               destination: host,
               error: e&.class,
               duration: ts,
