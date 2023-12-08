@@ -5,6 +5,13 @@ module NetworkResiliency
     module HTTP
       extend self
 
+      ERRORS = [
+        Timeout::Error,
+        IOError,
+        SystemCallError,
+        (OpenSSL::OpenSSLError if defined?(OpenSSL::SSL)),
+      ].compact
+
       REQUEST_TIMEOUT_HEADER = "X-Request-Timeout"
 
       def patch(instance = nil)
@@ -67,10 +74,7 @@ module NetworkResiliency
             set_timeout.call(timeout)
 
             yield timeout
-          rescue ::Timeout::Error,
-             defined?(OpenSSL::SSL) ? OpenSSL::OpenSSLError : IOError,
-             SystemCallError => e
-
+          rescue *ERRORS => e
             # capture error
             error = e.class
 
