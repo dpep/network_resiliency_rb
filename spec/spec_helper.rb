@@ -3,8 +3,11 @@ require "datadog/statsd"
 require "fiber"
 require "pg"
 require "mysql2"
+require 'rack/test'
+require 'rails'
 require "rspec"
 require "simplecov"
+require "timecop"
 
 SimpleCov.start do
   add_filter "spec/"
@@ -56,6 +59,17 @@ RSpec.configure do |config|
     stub_const("Net::HTTP", Class.new(Net::HTTP))
     stub_const("PG::Connection", Class.new(PG::Connection))
     stub_const("Redis::Client", Class.new(Redis::Client))
+  end
+
+  # Timecop: freeze time
+  config.around(:each) do |example|
+    # only with blocks
+    Timecop.safe_mode = true
+
+    # Freeze time by default
+    Timecop.freeze do
+      example.run
+    end
   end
 end
 

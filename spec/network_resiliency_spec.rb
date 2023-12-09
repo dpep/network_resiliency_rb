@@ -303,6 +303,40 @@ describe NetworkResiliency do
     end
   end
 
+  describe ".deadline" do
+    subject { described_class.deadline }
+
+    let(:now) { Time.now }
+    let(:timeout) { 0.01 }
+
+    it { is_expected.to be_nil }
+
+    it "can be set to a Time" do
+      described_class.deadline = now
+
+      is_expected.to eq now
+    end
+
+    it "can be set using a timeout in seconds" do
+      described_class.deadline = timeout
+
+      is_expected.to eq now + timeout
+    end
+
+    it "can be cleared" do
+      described_class.deadline = now
+      described_class.deadline = nil
+
+      is_expected.to be_nil
+    end
+
+    it "fails fast on invalid input" do
+      expect {
+        described_class.deadline = "foo"
+      }.to raise_error(ArgumentError)
+    end
+  end
+
   describe ".record" do
     subject do
       NetworkResiliency.record(

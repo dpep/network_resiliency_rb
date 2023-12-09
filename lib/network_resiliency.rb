@@ -13,10 +13,11 @@ module NetworkResiliency
     autoload :Redis, "network_resiliency/adapter/redis"
     autoload :Mysql, "network_resiliency/adapter/mysql"
     autoload :Postgres, "network_resiliency/adapter/postgres"
+    autoload :Rails, "network_resiliency/adapter/rails"
   end
 
   ACTIONS = [ :connect, :request ].freeze
-  ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres ].freeze
+  ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres, :rails ].freeze
   MODE = [ :observe, :resilient ].freeze
   RESILIENCY_SIZE_THRESHOLD = 1_000
 
@@ -49,6 +50,8 @@ module NetworkResiliency
         Adapter::Mysql.patch
       when :postgres
         Adapter::Postgres.patch
+      when :rails
+        Adapter::Rails.patch
       else
         raise NotImplementedError
       end
@@ -137,6 +140,25 @@ module NetworkResiliency
     end
 
     @mode.freeze
+  end
+
+  def deadline
+    thread_state["deadline"]
+  end
+
+  def deadline=(ts)
+    thread_state["deadline"] = case ts
+    when Numeric
+      Time.now + ts
+    when Time
+      ts
+    when nil
+      nil
+    else
+      raise ArgumentError, "invalid deadline: #{ts}"
+    end
+
+    # warn or raise if we're already past the deadline?
   end
 
   def normalize_request(adapter, request = nil, **context, &block)
