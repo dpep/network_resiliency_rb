@@ -1,3 +1,7 @@
+###  v0.7.0  (2023-12-11)
+- proc support for mode
+- rails adapater and deadline
+
 ###  v0.6.9  (2023-12-07)
 - tag mode
 - request timeout header
