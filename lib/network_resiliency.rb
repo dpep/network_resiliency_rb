@@ -111,13 +111,38 @@ module NetworkResiliency
       raise ArgumentError, "invalid NetworkResiliency action: #{action}"
     end
 
-    (@mode && @mode[action]) || :observe
+    mode = if @mode.is_a?(Proc)
+      @mode.call(action)
+    elsif @mode
+      @mode[action]
+    end || :observe
+
+    unless MODE.include?(mode)
+      raise ArgumentError, "invalid NetworkResiliency mode: #{mode}"
+    end
+
+    mode
+  rescue => e
+    NetworkResiliency.statsd&.increment(
+      "network_resiliency.error",
+      tags: {
+        method: __method__,
+        type: e.class,
+      },
+    )
+
+    warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
+
+    :observe
   end
 
   def mode=(mode)
     @mode = {}
 
-    if mode.is_a?(Hash)
+    case mode
+    when Proc
+      @mode = mode
+    when Hash
       invalid = mode.keys - ACTIONS
 
       unless invalid.empty?

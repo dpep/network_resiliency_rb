@@ -301,6 +301,52 @@ describe NetworkResiliency do
         }.to raise_error(ArgumentError)
       end
     end
+
+    context "when set to a method" do
+      before do
+        NetworkResiliency.mode = mode_fn
+      end
+
+      let(:mode_fn) do
+        ->(action) { action == :connect ? :resilient : :observe }
+      end
+
+      it { is_expected.to be :resilient }
+
+      it { expect(NetworkResiliency.mode(:request)).to be :observe }
+
+      context "when the method returns a valid mode" do
+        let(:mode_fn) { proc { :resilient } }
+
+        it { is_expected.to be :resilient }
+      end
+
+      context "when method returns nil" do
+        let(:mode_fn) { proc { nil } }
+
+        it { is_expected.to be :observe }
+      end
+
+      context "when the method returns an invalid mode" do
+        let(:mode_fn) { proc { :foo } }
+
+        it "fails fast" do
+          expect {
+            subject
+          }.to raise_error(ArgumentError)
+        end
+      end
+
+      context "when proc explodes" do
+        let(:mode_fn) { proc { raise } }
+
+        it "fails fast" do
+          expect {
+            subject
+          }.to raise_error(RuntimeError)
+        end
+      end
+    end
   end
 
   describe ".deadline" do
