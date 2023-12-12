@@ -304,10 +304,10 @@ describe NetworkResiliency do
 
     context "when set to a method" do
       before do
-        NetworkResiliency.mode = mode_fn
+        NetworkResiliency.mode = callback
       end
 
-      let(:mode_fn) do
+      let(:callback) do
         ->(action) { action == :connect ? :resilient : :observe }
       end
 
@@ -315,20 +315,20 @@ describe NetworkResiliency do
 
       it { expect(NetworkResiliency.mode(:request)).to be :observe }
 
-      context "when the method returns a valid mode" do
-        let(:mode_fn) { proc { :resilient } }
+      context "when callback returns a valid mode" do
+        let(:callback) { proc { :resilient } }
 
         it { is_expected.to be :resilient }
       end
 
-      context "when method returns nil" do
-        let(:mode_fn) { proc { nil } }
+      context "when callback returns nil" do
+        let(:callback) { proc { nil } }
 
         it { is_expected.to be :observe }
       end
 
-      context "when the method returns an invalid mode" do
-        let(:mode_fn) { proc { :foo } }
+      context "when callback returns an invalid mode" do
+        let(:callback) { proc { :foo } }
 
         it "fails fast" do
           expect {
@@ -337,21 +337,30 @@ describe NetworkResiliency do
         end
       end
 
-      context "when proc explodes" do
-        let(:mode_fn) { proc { raise } }
+      context "when callback explodes", :safely do
+        let(:error) { RuntimeError }
+        let(:callback) { proc { raise error } }
 
-        it "fails fast" do
-          expect {
-            subject
-          }.to raise_error(RuntimeError)
+        it "warns and falls back to observe" do
+          expect { subject }.to output(/ERROR/).to_stderr
+
+          expect(described_class.statsd).to have_received(:increment).with(
+            "network_resiliency.error",
+            tags: {
+              method: :mode,
+              type: error,
+            },
+          )
+
+          is_expected.to be :observe
         end
       end
 
-      context "when method recurses" do
+      context "when callback recurses" do
         # eg. ->(*) { Redis.get("mode") }
 
         it "switches to observe mode during recursion" do
-          expect(mode_fn).to receive(:call).once.and_wrap_original do |orig, *args|
+          expect(callback).to receive(:call).once.and_wrap_original do |orig, *args|
             is_expected.to be :observe
 
             orig.call(*args).tap do |mode|
