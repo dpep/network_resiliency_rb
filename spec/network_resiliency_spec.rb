@@ -304,10 +304,10 @@ describe NetworkResiliency do
 
     context "when set to a method" do
       before do
-        NetworkResiliency.mode = mode_fn
+        NetworkResiliency.mode = callback
       end
 
-      let(:mode_fn) do
+      let(:callback) do
         ->(action) { action == :connect ? :resilient : :observe }
       end
 
@@ -315,20 +315,20 @@ describe NetworkResiliency do
 
       it { expect(NetworkResiliency.mode(:request)).to be :observe }
 
-      context "when the method returns a valid mode" do
-        let(:mode_fn) { proc { :resilient } }
+      context "when callback returns a valid mode" do
+        let(:callback) { proc { :resilient } }
 
         it { is_expected.to be :resilient }
       end
 
-      context "when method returns nil" do
-        let(:mode_fn) { proc { nil } }
+      context "when callback returns nil" do
+        let(:callback) { proc { nil } }
 
         it { is_expected.to be :observe }
       end
 
-      context "when the method returns an invalid mode" do
-        let(:mode_fn) { proc { :foo } }
+      context "when callback returns an invalid mode" do
+        let(:callback) { proc { :foo } }
 
         it "fails fast" do
           expect {
@@ -337,15 +337,75 @@ describe NetworkResiliency do
         end
       end
 
-      context "when proc explodes" do
-        let(:mode_fn) { proc { raise } }
+      context "when callback explodes", :safely do
+        let(:error) { RuntimeError }
+        let(:callback) { proc { raise error } }
 
-        it "fails fast" do
-          expect {
-            subject
-          }.to raise_error(RuntimeError)
+        it "warns and falls back to observe" do
+          expect { subject }.to output(/ERROR/).to_stderr
+
+          expect(described_class.statsd).to have_received(:increment).with(
+            "network_resiliency.error",
+            tags: {
+              method: :mode,
+              type: error,
+            },
+          )
+
+          is_expected.to be :observe
         end
       end
+
+      context "when callback recurses" do
+        # eg. ->(*) { Redis.get("mode") }
+
+        it "switches to observe mode during recursion" do
+          expect(callback).to receive(:call).once.and_wrap_original do |orig, *args|
+            is_expected.to be :observe
+
+            orig.call(*args).tap do |mode|
+              expect(mode).to be :resilient
+            end
+          end
+
+          NetworkResiliency.mode(:connect)
+        end
+      end
+    end
+  end
+
+  describe ".observe!" do
+    subject { described_class.mode(:connect) }
+
+    before { described_class.mode = :resilient }
+
+    it { is_expected.to be :resilient }
+
+    it "switches mode for a given block" do
+      expect(described_class).to receive(:mode).once.and_call_original
+
+      described_class.observe! do
+        is_expected.to be :observe
+      end
+    end
+
+    it "resets mode after the block" do
+      described_class.observe! {}
+
+      is_expected.to be :resilient
+    end
+
+    it "is resilient to errors" do
+      expect {
+        described_class.observe! { raise }
+      }.to raise_error(RuntimeError)
+
+      is_expected.to be :resilient
+    end
+
+    it "passes through the return value" do
+      res = described_class.observe! { :woot }
+      expect(res).to be :woot
     end
   end
 
@@ -534,16 +594,9 @@ describe NetworkResiliency do
       end
     end
 
-    context "when errors arise in .record itself" do
+    context "when errors arise in .record itself", :safely do
       before do
         allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise
-
-        # replace spec_helper stub that raises errors
-        NetworkResiliency.statsd = instance_double(Datadog::Statsd)
-        allow(NetworkResiliency.statsd).to receive(:distribution)
-        allow(NetworkResiliency.statsd).to receive(:increment)
-        allow(NetworkResiliency.statsd).to receive(:gauge)
-        allow(NetworkResiliency.statsd).to receive(:time).and_yield
       end
 
       it "warns, but don't explode" do
@@ -682,17 +735,11 @@ describe NetworkResiliency do
       end
     end
 
-    context "when errors arise in .timeouts_for itself" do
+    context "when errors arise in .timeouts_for itself", :safely do
       let(:error) { RuntimeError }
 
       before do
         allow(NetworkResiliency::StatsEngine).to receive(:get).and_raise(error)
-
-        # replace spec_helper stub that raises errors
-        NetworkResiliency.statsd = instance_double(Datadog::Statsd)
-        allow(NetworkResiliency.statsd).to receive(:distribution)
-        allow(NetworkResiliency.statsd).to receive(:increment)
-        allow(NetworkResiliency.statsd).to receive(:time).and_yield
       end
 
       it "warns and falls back to the max timeout" do

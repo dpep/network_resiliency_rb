@@ -66,8 +66,7 @@ module NetworkResiliency
 
     if @enabled.is_a?(Proc)
       # prevent recursive calls
-      enabled = @enabled
-      disable! { !!enabled.call(adapter) }
+      disable! { !!@enabled.call(adapter) }
     else
       @enabled
     end
@@ -84,7 +83,6 @@ module NetworkResiliency
   end
 
   def enable!
-    original = @enabled
     thread_state["enabled"] = true
 
     yield if block_given?
@@ -93,7 +91,6 @@ module NetworkResiliency
   end
 
   def disable!
-    original = @enabled
     thread_state["enabled"] = false
 
     yield if block_given?
@@ -111,8 +108,11 @@ module NetworkResiliency
       raise ArgumentError, "invalid NetworkResiliency action: #{action}"
     end
 
+    return thread_state[:mode] if thread_state.key?(:mode)
+
     mode = if @mode.is_a?(Proc)
-      @mode.call(action)
+      # prevent recursion
+      observe! { @mode.call(action) }
     elsif @mode
       @mode[action]
     end || :observe
@@ -164,7 +164,15 @@ module NetworkResiliency
       ACTIONS.each { |action| @mode[action] = mode }
     end
 
-    @mode.freeze
+    @mode.freeze if @mode.is_a?(Hash)
+  end
+
+  def observe!
+    thread_state[:mode] = :observe
+
+    yield if block_given?
+  ensure
+    thread_state.delete(:mode) if block_given?
   end
 
   def deadline

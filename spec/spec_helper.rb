@@ -31,7 +31,7 @@ RSpec.configure do |config|
     mocks.verify_partial_doubles = true
   end
 
-  config.before do
+  config.before do |example|
     NetworkResiliency.reset
 
     NetworkResiliency.redis = Redis.new
@@ -46,7 +46,7 @@ RSpec.configure do |config|
     # surface errors instead of failing quietly
     allow(NetworkResiliency.statsd).to receive(:increment).with("network_resiliency.error", any_args) do
       raise $!
-    end
+    end unless example.metadata[:safely]
 
     # disable background sync
     allow(NetworkResiliency::Syncer).to receive(:start)
