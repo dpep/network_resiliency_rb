@@ -585,16 +585,9 @@ describe NetworkResiliency do
       end
     end
 
-    context "when errors arise in .record itself" do
+    context "when errors arise in .record itself", :safely do
       before do
         allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise
-
-        # replace spec_helper stub that raises errors
-        NetworkResiliency.statsd = instance_double(Datadog::Statsd)
-        allow(NetworkResiliency.statsd).to receive(:distribution)
-        allow(NetworkResiliency.statsd).to receive(:increment)
-        allow(NetworkResiliency.statsd).to receive(:gauge)
-        allow(NetworkResiliency.statsd).to receive(:time).and_yield
       end
 
       it "warns, but don't explode" do
@@ -733,17 +726,11 @@ describe NetworkResiliency do
       end
     end
 
-    context "when errors arise in .timeouts_for itself" do
+    context "when errors arise in .timeouts_for itself", :safely do
       let(:error) { RuntimeError }
 
       before do
         allow(NetworkResiliency::StatsEngine).to receive(:get).and_raise(error)
-
-        # replace spec_helper stub that raises errors
-        NetworkResiliency.statsd = instance_double(Datadog::Statsd)
-        allow(NetworkResiliency.statsd).to receive(:distribution)
-        allow(NetworkResiliency.statsd).to receive(:increment)
-        allow(NetworkResiliency.statsd).to receive(:time).and_yield
       end
 
       it "warns and falls back to the max timeout" do
