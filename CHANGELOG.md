@@ -1,3 +1,6 @@
+###  v0.7.1  (2023-12-12)
+- observe! and fix mode recursion
+
 ###  v0.7.0  (2023-12-11)
 - proc support for mode
 - rails adapater and deadline
