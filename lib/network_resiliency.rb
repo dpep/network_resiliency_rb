@@ -66,8 +66,7 @@ module NetworkResiliency
 
     if @enabled.is_a?(Proc)
       # prevent recursive calls
-      enabled = @enabled
-      disable! { !!enabled.call(adapter) }
+      disable! { !!@enabled.call(adapter) }
     else
       @enabled
     end
@@ -84,7 +83,6 @@ module NetworkResiliency
   end
 
   def enable!
-    original = @enabled
     thread_state["enabled"] = true
 
     yield if block_given?
@@ -93,7 +91,6 @@ module NetworkResiliency
   end
 
   def disable!
-    original = @enabled
     thread_state["enabled"] = false
 
     yield if block_given?
