@@ -346,6 +346,57 @@ describe NetworkResiliency do
           }.to raise_error(RuntimeError)
         end
       end
+
+      context "when method recurses" do
+        # eg. ->(*) { Redis.get("mode") }
+
+        it "switches to observe mode during recursion" do
+          expect(mode_fn).to receive(:call).once.and_wrap_original do |orig, *args|
+            is_expected.to be :observe
+
+            orig.call(*args).tap do |mode|
+              expect(mode).to be :resilient
+            end
+          end
+
+          NetworkResiliency.mode(:connect)
+        end
+      end
+    end
+  end
+
+  describe ".observe!" do
+    subject { described_class.mode(:connect) }
+
+    before { described_class.mode = :resilient }
+
+    it { is_expected.to be :resilient }
+
+    it "switches mode for a given block" do
+      expect(described_class).to receive(:mode).once.and_call_original
+
+      described_class.observe! do
+        is_expected.to be :observe
+      end
+    end
+
+    it "resets mode after the block" do
+      described_class.observe! {}
+
+      is_expected.to be :resilient
+    end
+
+    it "is resilient to errors" do
+      expect {
+        described_class.observe! { raise }
+      }.to raise_error(RuntimeError)
+
+      is_expected.to be :resilient
+    end
+
+    it "passes through the return value" do
+      res = described_class.observe! { :woot }
+      expect(res).to be :woot
     end
   end
 
