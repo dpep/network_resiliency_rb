@@ -758,7 +758,7 @@ describe NetworkResiliency do
     end
 
     it "logs the dynamic timeout" do
-      expect(NetworkResiliency.statsd).to receive(:gauge).with(
+      expect(NetworkResiliency.statsd).to receive(:distribution).with(
         "network_resiliency.connect.timeout.dynamic",
         p99,
         anything,
