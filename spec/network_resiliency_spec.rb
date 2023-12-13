@@ -806,9 +806,12 @@ describe NetworkResiliency do
         let(:units) { :seconds }
 
         it { is_expected.to eq 0.02 }
+        it { is_expected.to eq p99.to_f / 1_000 }
 
         context "when max is below p99" do
           let(:max) { 0.001 }
+
+          specify { expect(max).to be < p99 }
 
           it { is_expected.to eq max }
         end
