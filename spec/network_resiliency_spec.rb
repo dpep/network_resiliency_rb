@@ -757,6 +757,16 @@ describe NetworkResiliency do
       end
     end
 
+    it "logs the dynamic timeout" do
+      expect(NetworkResiliency.statsd).to receive(:gauge).with(
+        "network_resiliency.connect.timeout.dynamic",
+        p99,
+        anything,
+      )
+
+      subject
+    end
+
     context "when in observe mode" do
       before { described_class.mode = :observe }
 

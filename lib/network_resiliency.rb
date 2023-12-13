@@ -322,6 +322,16 @@ module NetworkResiliency
     }
 
     p99 = (stats.avg + stats.stdev * 3).power_ceil
+
+    NetworkResiliency.statsd&.gauge(
+      "network_resiliency.#{action}.timeout.dynamic",
+      p99,
+      tags: {
+        adapter: adapter,
+        destination: destination,
+      },
+    )
+
     timeouts = []
 
     if max
