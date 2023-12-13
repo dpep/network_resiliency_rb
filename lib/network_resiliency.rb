@@ -234,6 +234,7 @@ module NetworkResiliency
         error: error,
         mode: mode(action),
         attempts: (attempts if attempts > 1),
+        deadline_exceeded: (Time.now >= deadline if deadline),
       }.compact,
     )
 

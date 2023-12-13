@@ -630,6 +630,38 @@ describe NetworkResiliency do
         end
       end
     end
+
+    context "with a deadline" do
+      it "logs deadlines that were exceeded" do
+        described_class.deadline = Time.now
+
+        is_expected.to have_received(:distribution).with(
+          "network_resiliency.#{action}",
+          duration,
+          tags: include(deadline_exceeded: true),
+        )
+      end
+
+      it "logs deadlines that were not exceeded" do
+        described_class.deadline = Time.now + 1
+
+        is_expected.to have_received(:distribution).with(
+          "network_resiliency.#{action}",
+          duration,
+          tags: include(deadline_exceeded: false),
+        )
+      end
+    end
+
+    context "when there is no deadline" do
+      it "does not log deadline metric" do
+        is_expected.to have_received(:distribution).with(
+          "network_resiliency.#{action}",
+          duration,
+          tags: hash_not_including(:deadline_exceeded),
+        )
+      end
+    end
   end
 
   describe ".timeouts_for" do
