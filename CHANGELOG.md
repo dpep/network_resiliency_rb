@@ -1,3 +1,6 @@
+###  v0.7.3  (2023-12-13)
+- dynamic timeout distribution
+
 ###  v0.7.2  (2023-12-13)
 - dynamic timeout stats
 - deadline metric
