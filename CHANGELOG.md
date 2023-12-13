@@ -1,3 +1,7 @@
+###  v0.7.2  (2023-12-13)
+- dynamic timeout stats
+- deadline metric
+
 ###  v0.7.1  (2023-12-12)
 - observe! and fix mode recursion
 
