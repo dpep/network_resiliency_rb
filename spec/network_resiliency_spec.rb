@@ -679,12 +679,12 @@ describe NetworkResiliency do
       instance_double(
         NetworkResiliency::Stats,
         n: n,
-        avg: 10,
+        avg: 6,
         stdev: 1,
       )
     end
     let(:n) { described_class::RESILIENCY_SIZE_THRESHOLD }
-    let(:p99) { 20 }
+    let(:p99) { 10 }
     let(:max) { 100 }
     let(:units) { nil }
 
@@ -717,12 +717,12 @@ describe NetworkResiliency do
       let(:max) { nil }
 
       it "should make one attempt with a timeout and one unbounded attempt" do
-        is_expected.to eq [ 20, nil ]
+        is_expected.to eq [ p99, nil ]
       end
     end
 
     context "when the max timeout is less than the expected p99" do
-      let(:max) { 15 }
+      let(:max) { p99 / 2 }
 
       it "only makes one attempt, with the max" do
         is_expected.to eq [ max ]
@@ -739,7 +739,7 @@ describe NetworkResiliency do
     end
 
     context "when the max timeout is similarly sized to the p99" do
-      let(:max) { 30 }
+      let(:max) { p99 * 1.5 }
 
       specify { expect(max - p99).to be < p99 }
 
@@ -815,7 +815,7 @@ describe NetworkResiliency do
       context "when units are seconds" do
         let(:units) { :seconds }
 
-        it { is_expected.to eq 0.02 }
+        it { is_expected.to eq 0.01 }
         it { is_expected.to eq p99.to_f / 1_000 }
 
         context "when max is below p99" do

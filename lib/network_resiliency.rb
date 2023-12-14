@@ -321,7 +321,7 @@ module NetworkResiliency
       destination: destination,
     }
 
-    p99 = (stats.avg + stats.stdev * 3).power_ceil
+    p99 = (stats.avg + stats.stdev * 3).order_of_magnitude(ceil: true)
 
     NetworkResiliency.statsd&.distribution(
       "network_resiliency.#{action}.timeout.dynamic",
