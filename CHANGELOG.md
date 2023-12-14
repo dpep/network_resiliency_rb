@@ -1,3 +1,6 @@
+###  v0.7.4  (2023-12-13)
+- increase dynamic timeouts
+
 ###  v0.7.3  (2023-12-13)
 - dynamic timeout distribution
 
