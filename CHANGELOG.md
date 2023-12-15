@@ -1,3 +1,7 @@
+###  v0.7.5  (2023-12-14)
+- syncing stats
+- stats cache
+
 ###  v0.7.4  (2023-12-13)
 - increase dynamic timeouts
 
