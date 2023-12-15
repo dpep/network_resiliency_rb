@@ -154,12 +154,12 @@ module NetworkResiliency
             sq_dist = sq_dist + other_sq_dist
             sq_dist = sq_dist + (delta ^ 2) * prev_n * other_n / n
           end
-        end
 
-        -- update cache
-        if n >= #{MIN_SAMPLE_SIZE} then
-          cached_stats = string.format('%d|%f|%d', n, avg, sq_dist)
-          redis.call('SET', cache_key, cached_stats, 'EX', #{CACHE_TTL})
+          -- update cache
+          if n >= #{MIN_SAMPLE_SIZE} then
+            cached_stats = string.format('%d|%f|%d', n, avg, sq_dist)
+            redis.call('SET', cache_key, cached_stats, 'EX', #{CACHE_TTL})
+          end
         end
 
         -- accumulate results
