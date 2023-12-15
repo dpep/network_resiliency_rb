@@ -264,6 +264,7 @@ module NetworkResiliency
         adapter: adapter,
         destination: destination,
         n: stats.n.order_of_magnitude,
+        sync: Syncer.syncing?,
       }
 
       NetworkResiliency.statsd&.distribution(

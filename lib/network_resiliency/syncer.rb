@@ -10,6 +10,10 @@ module NetworkResiliency
         @instance&.shutdown
         @instance = nil
       end
+
+      def syncing?
+        !!@instance&.alive?
+      end
     end
 
     def initialize(redis)

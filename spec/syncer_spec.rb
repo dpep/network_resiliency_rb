@@ -44,4 +44,24 @@ describe NetworkResiliency::Syncer do
       expect(worker).not_to be_alive
     end
   end
+
+  describe ".syncing?" do
+    subject { described_class.syncing? }
+
+    it { is_expected.to be false }
+
+    it "returns true when syncing" do
+      start
+
+      is_expected.to be true
+    end
+
+    it "returns false when syncing is stopped" do
+      worker = start
+      described_class.stop
+      worker.join
+
+      is_expected.to be false
+    end
+  end
 end
