@@ -324,15 +324,6 @@ module NetworkResiliency
 
     p99 = (stats.avg + stats.stdev * 3).order_of_magnitude(ceil: true)
 
-    NetworkResiliency.statsd&.distribution(
-      "network_resiliency.#{action}.timeout.dynamic",
-      p99,
-      tags: {
-        adapter: adapter,
-        destination: destination,
-      },
-    )
-
     timeouts = []
 
     if max
@@ -375,6 +366,15 @@ module NetworkResiliency
         tags: tags,
       )
     end
+
+    NetworkResiliency.statsd&.distribution(
+      "network_resiliency.#{action}.timeout.dynamic",
+      timeouts[0],
+      tags: {
+        adapter: adapter,
+        destination: destination,
+      },
+    )
 
     case units
     when nil, :ms, :milliseconds

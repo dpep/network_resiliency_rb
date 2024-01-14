@@ -729,6 +729,12 @@ describe NetworkResiliency do
       end
 
       it "logs the event" do
+        expect(NetworkResiliency.statsd).to receive(:distribution).with(
+          "network_resiliency.connect.timeout.dynamic",
+          max,
+          anything,
+        )
+
         expect(NetworkResiliency.statsd).to receive(:increment).with(
           "network_resiliency.timeout.too_low",
           anything,
