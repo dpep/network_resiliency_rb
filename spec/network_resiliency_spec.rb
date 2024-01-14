@@ -686,10 +686,12 @@ describe NetworkResiliency do
     let(:p99) { 10 }
     let(:max) { 100 }
     let(:units) { nil }
+    let(:timeout_min) { 0 }
 
     before do
       allow(described_class::StatsEngine).to receive(:get).and_return(stats)
       described_class.mode = :resilient
+      described_class.timeout_min = timeout_min
     end
 
     it "makes two attempts" do
@@ -762,6 +764,14 @@ describe NetworkResiliency do
       end
     end
 
+    context "when timeout_min comes into play" do
+      let(:timeout_min) { 50 }
+
+      it "falls back to the timeout_min" do
+        is_expected.to eq [ described_class.timeout_min, max ]
+      end
+    end
+
     it "logs the dynamic timeout" do
       expect(NetworkResiliency.statsd).to receive(:distribution).with(
         "network_resiliency.connect.timeout.dynamic",
@@ -797,13 +807,13 @@ describe NetworkResiliency do
       subject { timeouts.first }
 
       it "defaults to milliseconds" do
-        is_expected.to be p99
+        is_expected.to eq p99
       end
 
       context "when units are milliseconds" do
         let(:units) { :ms }
 
-        it { is_expected.to be p99 }
+        it { is_expected.to eq p99 }
       end
 
       context "when units are seconds" do
@@ -930,6 +940,30 @@ describe NetworkResiliency do
       expect { subject }.to output(
         /NetworkResiliency #{method_name}: #{error.class}: #{error.message}/,
       ).to_stderr
+    end
+  end
+
+  describe ".timeout_min" do
+    subject { described_class.timeout_min }
+
+    it "has a default" do
+      is_expected.to eq described_class::DEFAULT_TIMEOUT_MIN
+    end
+
+    context "when set" do
+      before { described_class.timeout_min = timeout }
+
+      let(:timeout) { 1_000 }
+
+      it { is_expected.to eq timeout }
+    end
+
+    context "when set to a bogus value" do
+      it "fails fast" do
+        expect {
+          described_class.timeout_min = "foo"
+        }.to raise_error(ArgumentError)
+      end
     end
   end
 end

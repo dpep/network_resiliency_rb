@@ -19,6 +19,7 @@ module NetworkResiliency
 
   ACTIONS = [ :connect, :request ].freeze
   ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres, :rails ].freeze
+  DEFAULT_TIMEOUT_MIN = 10 # ms
   MODE = [ :observe, :resilient ].freeze
   RESILIENCY_THRESHOLD = 300
   SAMPLE_RATE = {
@@ -216,6 +217,18 @@ module NetworkResiliency
     end
   end
 
+  def timeout_min=(val)
+    unless val.nil? || val.is_a?(Numeric)
+      raise ArgumentError, "invalid timeout_min: #{val}"
+    end
+
+    @timeout_min = val
+  end
+
+  def timeout_min
+    @timeout_min || DEFAULT_TIMEOUT_MIN
+  end
+
   # private
 
   def record(adapter:, action:, destination:, duration:, error:, timeout:, attempts: 1)
@@ -326,6 +339,7 @@ module NetworkResiliency
     }
 
     p99 = (stats.avg + stats.stdev * 2).order_of_magnitude(ceil: true)
+    p99 = [ p99, timeout_min ].max
 
     timeouts = []
 
@@ -402,6 +416,7 @@ module NetworkResiliency
     @mode = nil
     @normalize_request = nil
     @patched = nil
+    @timeout_min = nil
     Thread.current["network_resiliency"] = nil
     StatsEngine.reset
     Syncer.stop
