@@ -1,3 +1,6 @@
+###  v0.7.6  (2024-01-16)
+- dynamic timeout logging fix
+
 ###  v0.7.5  (2023-12-14)
 - syncing stats
 - stats cache
