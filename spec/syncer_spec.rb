@@ -26,21 +26,19 @@ describe NetworkResiliency::Syncer do
       first_worker = start
       second_worker = start
 
-      first_worker.join
-
       expect(first_worker).not_to be_alive
       expect(second_worker).to be_alive
     end
   end
 
   describe ".stop" do
+    let(:worker) { start }
+
     it "stops syncing" do
-      worker = start
       expect(worker).to be_alive
 
       described_class.stop
 
-      worker.join
       expect(worker).not_to be_alive
     end
   end
@@ -57,9 +55,8 @@ describe NetworkResiliency::Syncer do
     end
 
     it "returns false when syncing is stopped" do
-      worker = start
+      start
       described_class.stop
-      worker.join
 
       is_expected.to be false
     end

@@ -854,9 +854,12 @@ describe NetworkResiliency do
   end
 
   describe ".reset" do
+    before { allow(NetworkResiliency::Syncer).to receive(:stop) }
+
     it "stop syncing" do
-      expect(NetworkResiliency::Syncer).to receive(:stop)
       described_class.reset
+
+      expect(NetworkResiliency::Syncer).to have_received(:stop)
     end
   end
 

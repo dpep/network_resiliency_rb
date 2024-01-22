@@ -32,8 +32,6 @@ RSpec.configure do |config|
   end
 
   config.before do |example|
-    NetworkResiliency.reset
-
     NetworkResiliency.redis = Redis.new
     NetworkResiliency.redis.flushall
 
@@ -59,6 +57,10 @@ RSpec.configure do |config|
     stub_const("Net::HTTP", Class.new(Net::HTTP))
     stub_const("PG::Connection", Class.new(PG::Connection))
     stub_const("Redis::Client", Class.new(Redis::Client))
+  end
+
+  config.after do
+    NetworkResiliency.reset
   end
 
   # Timecop: freeze time

@@ -2,13 +2,20 @@ module NetworkResiliency
   class Syncer < Thread
     class << self
       def start(redis)
-        @instance&.shutdown
+        NetworkResiliency.statsd&.increment("network_resiliency.syncer.start")
+
+        stop if @instance
         @instance = new(redis)
       end
 
       def stop
-        @instance&.shutdown
-        @instance = nil
+        NetworkResiliency.statsd&.increment("network_resiliency.syncer.stop")
+
+        if @instance
+          @instance.shutdown
+          @instance.join
+          @instance = nil
+        end
       end
 
       def syncing?
@@ -33,6 +40,8 @@ module NetworkResiliency
 
     def sync
       until @shutdown
+        NetworkResiliency.statsd&.increment("network_resiliency.syncer.sync")
+
         StatsEngine.sync(@redis)
 
         sleep(3)
