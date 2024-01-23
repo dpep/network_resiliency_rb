@@ -1,3 +1,6 @@
+###  v0.7.7  (2024-01-23)
+- syncer stats
+
 ###  v0.7.6  (2024-01-16)
 - dynamic timeout logging fix
 
