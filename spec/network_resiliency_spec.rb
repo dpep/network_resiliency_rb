@@ -472,7 +472,7 @@ describe NetworkResiliency do
         tags: include(destination: host),
       )
 
-      is_expected.to have_received(:gauge).with(
+      is_expected.to have_received(:distribution).with(
         "network_resiliency.#{action}.timeout",
         timeout,
         anything,
@@ -503,7 +503,7 @@ describe NetworkResiliency do
       let(:timeout) { nil }
 
       it "does not track timeout" do
-        is_expected.not_to have_received(:gauge).with(
+        is_expected.not_to have_received(:distribution).with(
           "network_resiliency.#{action}.timeout",
           any_args,
         )
@@ -514,7 +514,7 @@ describe NetworkResiliency do
       let(:timeout) { 0 }
 
       it "does not track timeout" do
-        is_expected.not_to have_received(:gauge).with(
+        is_expected.not_to have_received(:distribution).with(
           "network_resiliency.#{action}.timeout",
           any_args,
         )

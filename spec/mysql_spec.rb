@@ -60,7 +60,7 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
     it "logs timeout" do
       subject
 
-      expect(NetworkResiliency.statsd).to have_received(:gauge).with(
+      expect(NetworkResiliency.statsd).to have_received(:distribution).with(
         "network_resiliency.connect.timeout",
         timeout * 1_000,
         anything,
@@ -73,7 +73,10 @@ describe NetworkResiliency::Adapter::Mysql, :mock_mysql do
       it "does not log timeout" do
         subject
 
-        expect(NetworkResiliency.statsd).not_to have_received(:gauge)
+        expect(NetworkResiliency.statsd).not_to have_received(:distribution).with(
+          "network_resiliency.connect.timeout",
+          anything,
+        )
       end
     end
 

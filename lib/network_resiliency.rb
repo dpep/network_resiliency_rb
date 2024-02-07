@@ -238,7 +238,7 @@ module NetworkResiliency
       }.compact,
     )
 
-    NetworkResiliency.statsd&.gauge(
+    NetworkResiliency.statsd&.distribution(
       "network_resiliency.#{action}.timeout",
       timeout,
       tags: {
