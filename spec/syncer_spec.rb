@@ -7,10 +7,8 @@ describe NetworkResiliency::Syncer do
     allow(NetworkResiliency::Syncer).to receive(:start).and_call_original
   end
 
-  let(:redis) { Redis.new }
-
   def start
-    described_class.start(redis)
+    described_class.start
   end
 
   describe ".start" do

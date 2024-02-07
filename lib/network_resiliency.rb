@@ -28,7 +28,7 @@ module NetworkResiliency
   def configure
     yield self if block_given?
 
-    Syncer.start(redis) if redis
+    Syncer.start if redis
 
     unless @patched
       # patch everything that's available

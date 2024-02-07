@@ -1,11 +1,11 @@
 module NetworkResiliency
   class Syncer < Thread
     class << self
-      def start(redis)
+      def start
         NetworkResiliency.statsd&.increment("network_resiliency.syncer.start")
 
         stop if @instance
-        @instance = new(redis)
+        @instance = new
       end
 
       def stop
@@ -23,9 +23,7 @@ module NetworkResiliency
       end
     end
 
-    def initialize(redis)
-      @redis = redis
-
+    def initialize
       super { sync }
     end
 
@@ -42,7 +40,7 @@ module NetworkResiliency
       until @shutdown
         NetworkResiliency.statsd&.increment("network_resiliency.syncer.sync")
 
-        StatsEngine.sync(@redis)
+        StatsEngine.sync(NetworkResiliency.redis)
 
         sleep(3)
       end
