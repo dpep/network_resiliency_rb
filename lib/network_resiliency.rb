@@ -28,8 +28,6 @@ module NetworkResiliency
   def configure
     yield self if block_given?
 
-    Syncer.start if redis
-
     unless @patched
       # patch everything that's available
       ADAPTERS.each do |adapter|
@@ -266,6 +264,9 @@ module NetworkResiliency
         n: stats.n.order_of_magnitude,
         sync: Syncer.syncing?,
       }
+
+      # ensure Syncer is running
+      Syncer.start
 
       NetworkResiliency.statsd&.distribution(
         "network_resiliency.#{action}.stats.n",

@@ -1,20 +1,28 @@
 module NetworkResiliency
   class Syncer < Thread
+    LOCK = Mutex.new
+
     class << self
       def start
-        NetworkResiliency.statsd&.increment("network_resiliency.syncer.start")
+        return unless NetworkResiliency.redis
 
-        stop if @instance
-        @instance = new
+        LOCK.synchronize do
+          unless @instance&.alive?
+            @instance = new
+            NetworkResiliency.statsd&.increment("network_resiliency.syncer.start")
+          end
+
+          @instance
+        end
       end
 
       def stop
-        NetworkResiliency.statsd&.increment("network_resiliency.syncer.stop")
-
-        if @instance
-          @instance.shutdown
-          @instance.join
-          @instance = nil
+        LOCK.synchronize do
+          if @instance
+            @instance.shutdown
+            @instance.join
+            @instance = nil
+          end
         end
       end
 
@@ -38,8 +46,6 @@ module NetworkResiliency
 
     def sync
       until @shutdown
-        NetworkResiliency.statsd&.increment("network_resiliency.syncer.sync")
-
         StatsEngine.sync(NetworkResiliency.redis)
 
         sleep(3)

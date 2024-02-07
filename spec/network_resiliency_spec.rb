@@ -236,20 +236,6 @@ describe NetworkResiliency do
       expect(NetworkResiliency::Adapter::HTTP.patched?).to be false
       expect(NetworkResiliency::Adapter::Redis.patched?).to be false
     end
-
-    it "will start syncing" do
-      NetworkResiliency.configure
-      expect(NetworkResiliency::Syncer).to have_received(:start)
-    end
-
-    context "when Redis is not configured" do
-      before { NetworkResiliency.redis = nil }
-
-      it "will not start syncing" do
-        NetworkResiliency.configure
-        expect(NetworkResiliency::Syncer).not_to have_received(:start)
-      end
-    end
   end
 
   describe ".mode" do
@@ -661,6 +647,11 @@ describe NetworkResiliency do
           tags: hash_not_including(:deadline_exceeded),
         )
       end
+    end
+
+    it "will start sync worker" do
+      subject
+      expect(NetworkResiliency::Syncer).to have_received(:start)
     end
   end
 
