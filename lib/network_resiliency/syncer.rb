@@ -33,7 +33,7 @@ module NetworkResiliency
       @shutdown = true
 
       # prevent needless delay
-      raise Interrupt if status == "sleep"
+      self.raise Interrupt if status == "sleep"
     end
 
     private
