@@ -48,7 +48,7 @@ module NetworkResiliency
       until @shutdown
         StatsEngine.sync(NetworkResiliency.redis)
 
-        sleep(3)
+        sleep(10)
       end
     rescue Interrupt
     end
