@@ -1,3 +1,6 @@
+###  v0.7.9  (2024-02-07)
+- sync frequency
+
 ###  v0.7.8  (2024-02-07)
 - lazy syncing
 - timeout metric
