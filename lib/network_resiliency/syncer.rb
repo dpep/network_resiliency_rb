@@ -51,6 +51,8 @@ module NetworkResiliency
         sleep(10)
       end
     rescue Interrupt
+    rescue => e
+      NetworkResiliency.warn(__method__, e)
     end
   end
 end

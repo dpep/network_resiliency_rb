@@ -79,4 +79,26 @@ describe NetworkResiliency::Syncer do
       is_expected.to be false
     end
   end
+
+  describe "#sync" do
+    subject(:sync) { worker.send(:sync) }
+
+    let(:worker) do
+      worker = start
+      worker.kill
+      worker.join
+    end
+
+    context "when worker encounters an error", :safely do
+      before do
+        allow(NetworkResiliency::StatsEngine).to receive(:sync).and_raise
+      end
+
+      it "logs the error" do
+        expect(NetworkResiliency).to receive(:warn)
+
+        sync
+      end
+    end
+  end
 end
