@@ -121,15 +121,7 @@ module NetworkResiliency
 
     mode
   rescue => e
-    NetworkResiliency.statsd&.increment(
-      "network_resiliency.error",
-      tags: {
-        method: __method__,
-        type: e.class,
-      },
-    )
-
-    warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
+    warn(__method__, e)
 
     :observe
   end
@@ -289,15 +281,7 @@ module NetworkResiliency
 
     nil
   rescue => e
-    NetworkResiliency.statsd&.increment(
-      "network_resiliency.error",
-      tags: {
-        method: __method__,
-        type: e.class,
-      },
-    )
-
-    warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
+    warn(__method__, e)
   end
 
   IP_ADDRESS_REGEX = /\d{1,3}(\.\d{1,3}){3}/
@@ -386,15 +370,7 @@ module NetworkResiliency
       raise ArgumentError, "invalid units: #{units}"
     end
   rescue => e
-    NetworkResiliency.statsd&.increment(
-      "network_resiliency.error",
-      tags: {
-        method: __method__,
-        type: e.class,
-      },
-    )
-
-    warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
+    warn(__method__, e)
 
     default
   end
@@ -413,5 +389,17 @@ module NetworkResiliency
 
   def thread_state
     Thread.current["network_resiliency"] ||= {}
+  end
+
+  def warn(method, e)
+    NetworkResiliency.statsd&.increment(
+      "network_resiliency.error",
+      tags: {
+        method: method,
+        type: e.class,
+      },
+    )
+
+    Kernel.warn "[ERROR] NetworkResiliency #{method}: #{e.class}: #{e.message}"
   end
 end

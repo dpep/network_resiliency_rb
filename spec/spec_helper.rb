@@ -42,7 +42,7 @@ RSpec.configure do |config|
     allow(NetworkResiliency.statsd).to receive(:time).and_yield
 
     # surface errors instead of failing quietly
-    allow(NetworkResiliency.statsd).to receive(:increment).with("network_resiliency.error", any_args) do
+    allow(NetworkResiliency).to receive(:warn) do
       raise $!
     end unless example.metadata[:safely]
 

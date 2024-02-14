@@ -324,20 +324,10 @@ describe NetworkResiliency do
       end
 
       context "when callback explodes", :safely do
-        let(:error) { RuntimeError }
-        let(:callback) { proc { raise error } }
+        let(:callback) { proc { raise } }
 
         it "warns and falls back to observe" do
-          expect { subject }.to output(/ERROR/).to_stderr
-
-          expect(described_class.statsd).to have_received(:increment).with(
-            "network_resiliency.error",
-            tags: {
-              method: :mode,
-              type: error,
-            },
-          )
-
+          expect(described_class).to receive(:warn).with(:mode, Exception)
           is_expected.to be :observe
         end
       end
@@ -586,15 +576,8 @@ describe NetworkResiliency do
       end
 
       it "warns, but don't explode" do
-        expect { subject }.to output(/ERROR/).to_stderr
-
-        is_expected.to have_received(:increment).with(
-          "network_resiliency.error",
-          tags: {
-            method: :record,
-            type: RuntimeError,
-          },
-        )
+        expect(described_class).to receive(:warn).with(:record, Exception)
+        subject
       end
     end
 
@@ -606,13 +589,14 @@ describe NetworkResiliency do
         subject
       end
 
-      context "when errors arise" do
+      context "when errors arise in safe mode", :safely do
         before do
           allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise
         end
 
         it "warns, but doesn't explode" do
-          expect { subject }.to output(/ERROR/).to_stderr
+          expect(described_class).to receive(:warn).with(:record, Exception)
+          subject
         end
       end
     end
@@ -775,23 +759,12 @@ describe NetworkResiliency do
     end
 
     context "when errors arise in .timeouts_for itself", :safely do
-      let(:error) { RuntimeError }
-
       before do
-        allow(NetworkResiliency::StatsEngine).to receive(:get).and_raise(error)
+        allow(NetworkResiliency::StatsEngine).to receive(:get).and_raise
       end
 
       it "warns and falls back to the max timeout" do
-        expect { subject }.to output(/ERROR/).to_stderr
-
-        expect(described_class.statsd).to have_received(:increment).with(
-          "network_resiliency.error",
-          tags: {
-            method: :timeouts_for,
-            type: error,
-          },
-        )
-
+        expect(described_class).to receive(:warn).with(:timeouts_for, Exception)
         is_expected.to eq [ max ]
       end
     end
@@ -915,6 +888,24 @@ describe NetworkResiliency do
           described_class.normalize_request(:http, path) { nil }
       }.to raise_error(ArgumentError)
       end
+    end
+  end
+
+  describe ".warn", :safely do
+    subject { described_class.warn(method_name, error) }
+
+    let(:method_name) { :my_method }
+    let(:error) { Redis::CannotConnectError.new("nope") }
+
+    it "logs a warning and sends Datadog metrics" do
+      expect(NetworkResiliency.statsd).to receive(:increment).with(
+        "network_resiliency.error",
+        tags: { method: method_name, type: error.class },
+      )
+
+      expect { subject }.to output(
+        /NetworkResiliency #{method_name}: #{error.class}: #{error.message}/,
+      ).to_stderr
     end
   end
 end
