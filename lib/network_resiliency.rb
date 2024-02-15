@@ -20,6 +20,11 @@ module NetworkResiliency
   ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres, :rails ].freeze
   MODE = [ :observe, :resilient ].freeze
   RESILIENCY_SIZE_THRESHOLD = 1_000
+  SAMPLE_RATE = {
+    timeout: 0.1,
+    stats: 0.1,
+    sync: 0.1,
+  }
 
   extend self
 
@@ -235,6 +240,7 @@ module NetworkResiliency
         adapter: adapter,
         destination: destination,
       },
+      sample_rate: SAMPLE_RATE[:timeout],
     ) if timeout && timeout > 0
 
     if error
@@ -264,18 +270,21 @@ module NetworkResiliency
         "network_resiliency.#{action}.stats.n",
         stats.n,
         tags: tags,
+        sample_rate: SAMPLE_RATE[:stats],
       )
 
       NetworkResiliency.statsd&.distribution(
         "network_resiliency.#{action}.stats.avg",
         stats.avg,
         tags: tags,
+        sample_rate: SAMPLE_RATE[:stats],
       )
 
       NetworkResiliency.statsd&.distribution(
         "network_resiliency.#{action}.stats.stdev",
         stats.stdev,
         tags: tags,
+        sample_rate: SAMPLE_RATE[:stats],
       )
     end
 
@@ -327,6 +336,7 @@ module NetworkResiliency
           NetworkResiliency.statsd&.increment(
             "network_resiliency.timeout.raised",
             tags: tags,
+            sample_rate: SAMPLE_RATE[:timeout],
           )
         end
       else
@@ -336,6 +346,7 @@ module NetworkResiliency
         NetworkResiliency.statsd&.increment(
           "network_resiliency.timeout.too_low",
           tags: tags,
+          sample_rate: SAMPLE_RATE[:timeout],
         )
       end
     else
@@ -349,6 +360,7 @@ module NetworkResiliency
       NetworkResiliency.statsd&.increment(
         "network_resiliency.timeout.missing",
         tags: tags,
+        sample_rate: SAMPLE_RATE[:timeout],
       )
     end
 
@@ -359,6 +371,7 @@ module NetworkResiliency
         adapter: adapter,
         destination: destination,
       },
+      sample_rate: SAMPLE_RATE[:timeout],
     )
 
     case units
