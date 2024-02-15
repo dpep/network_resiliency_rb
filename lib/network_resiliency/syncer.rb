@@ -46,6 +46,9 @@ module NetworkResiliency
     private
 
     def sync
+      # force redis to reconnect post fork
+      NetworkResiliency.redis.disconnect! if NetworkResiliency.redis.connected?
+
       until @shutdown
         StatsEngine.sync(NetworkResiliency.redis)
 
