@@ -97,7 +97,7 @@ module NetworkResiliency
     MIN_SAMPLE_SIZE = 1000
     MAX_WINDOW_LENGTH = 1000
     STATS_TTL = 24 * 60 * 60 # 1 day
-    CACHE_TTL = 60 # seconds
+    CACHE_TTL = 120 # seconds
 
     LUA_SCRIPT = <<~LUA
       local results = {}
