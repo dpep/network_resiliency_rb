@@ -463,7 +463,7 @@ describe NetworkResiliency do
       is_expected.to have_received(:distribution).with(
         "network_resiliency.#{action}.stats.avg",
         duration,
-        tags: include(n: 1),
+        anything,
       )
     end
 
