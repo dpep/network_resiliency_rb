@@ -100,5 +100,12 @@ describe NetworkResiliency::Syncer do
         sync
       end
     end
+
+    it "sleeps between syncs" do
+      expect(NetworkResiliency::StatsEngine).to receive(:sync)
+      expect(worker).to receive(:sleep).and_raise(Interrupt)
+
+      sync
+    end
   end
 end
