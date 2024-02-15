@@ -1,6 +1,7 @@
 module NetworkResiliency
   class Syncer < Thread
     LOCK = Mutex.new
+    SLEEP_DURATION = 10
 
     class << self
       def start
@@ -48,7 +49,7 @@ module NetworkResiliency
       until @shutdown
         StatsEngine.sync(NetworkResiliency.redis)
 
-        sleep(10)
+        sleep(SLEEP_DURATION)
       end
     rescue Interrupt
     rescue => e
