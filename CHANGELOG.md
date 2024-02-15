@@ -1,3 +1,9 @@
+###  v0.7.10  (2024-02-15)
+- ddog sampling
+- reconnect redis
+- sync logging
+- warn method
+
 ###  v0.7.9  (2024-02-07)
 - sync frequency
 
