@@ -189,11 +189,9 @@ module NetworkResiliency
       end
 
       res = redis.eval(LUA_SCRIPT, keys, args)
-      data.keys.zip(res.each_slice(3)).map do |key, stats|
-        n, avg, sq_dist = *stats
-
-        [ key, Stats.from(n: n, avg: avg, sq_dist: sq_dist) ]
-      end.to_h
+      data.keys.zip(res.each_slice(3)).to_h.transform_values! do |n, avg, sq_dist|
+        Stats.from(n: n, avg: avg, sq_dist: sq_dist)
+      end
     end
 
     def self.fetch(redis, keys)
