@@ -1,3 +1,8 @@
+###  v0.7.11  (2024-02-20)
+- lower dynamic timeout
+- fix metric specs
+- extend cache ttl
+
 ###  v0.7.10  (2024-02-15)
 - ddog sampling
 - reconnect redis
