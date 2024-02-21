@@ -3,7 +3,7 @@ require "network_resiliency/refinements"
 using NetworkResiliency::Refinements
 
 module NetworkResiliency
-  class PowerBuckets
+  class PowerStats
     MIN_VALUE = 1
 
     attr_reader :n

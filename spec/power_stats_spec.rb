@@ -1,4 +1,4 @@
-describe NetworkResiliency::PowerBuckets do
+describe NetworkResiliency::PowerStats do
   subject(:buckets) { described_class.new }
 
   describe "#n" do
@@ -88,7 +88,7 @@ describe NetworkResiliency::PowerBuckets do
   end
 
   describe "#merge" do
-    it "returns a PowerBuckets instance" do
+    it "returns a PowerStats instance" do
       expect(buckets.merge(buckets)).to be_a(described_class)
     end
 

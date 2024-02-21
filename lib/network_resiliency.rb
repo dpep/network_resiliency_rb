@@ -1,4 +1,4 @@
-require "network_resiliency/power_buckets"
+require "network_resiliency/power_stats"
 require "network_resiliency/refinements"
 require "network_resiliency/stats"
 require "network_resiliency/stats_engine"
