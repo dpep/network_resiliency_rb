@@ -100,14 +100,14 @@ module NetworkResiliency
       self
     end
 
-    synchronize def scale(percentage)
+    synchronize def scale!(percentage)
       raise ArgumentError, "Numeric expected, found #{percentage.class}" unless percentage.is_a?(Numeric)
       raise ArgumentError, "argument must be between 0 and 100" unless percentage.between?(0, 100)
 
       factor = percentage / 100.0
 
-      @n = (@n * factor).round
       @buckets.map! {|x| (x * factor).round if x }
+      @n = @buckets.compact.sum
     end
 
     synchronize def reset

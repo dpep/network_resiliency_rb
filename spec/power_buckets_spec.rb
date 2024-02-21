@@ -148,11 +148,11 @@ describe NetworkResiliency::PowerBuckets do
     end
   end
 
-  describe "#scale" do
+  describe "#scale!" do
     it "scales the bucket" do
       10.times { buckets << 1 }
       10.times { buckets << 10 }
-      buckets.scale(50)
+      buckets.scale!(50)
 
       expect(buckets.n).to be 10
       expect(buckets.percentile(1)).to be 1
@@ -161,13 +161,20 @@ describe NetworkResiliency::PowerBuckets do
       expect(buckets.percentile(100)).to be 10
     end
 
+    it "rounds scaled values" do
+      7.times { buckets << 1 }
+      buckets.scale!(50)
+
+      expect(buckets.n).to be 4
+    end
+
     it "raises an error for invalid percentages" do
       expect {
-        buckets.scale(-1)
+        buckets.scale!(-1)
       }.to raise_error(ArgumentError)
 
       expect {
-        buckets.scale(101)
+        buckets.scale!(101)
       }.to raise_error(ArgumentError)
     end
   end
