@@ -87,6 +87,15 @@ describe NetworkResiliency::PowerStats do
     end
   end
 
+  describe "#p99" do
+    it "returns the 99th percentile" do
+      99.times { buckets << 1 }
+      buckets << 100
+
+      expect(buckets.p99).to be 100
+    end
+  end
+
   describe "#merge" do
     it "returns a PowerStats instance" do
       expect(buckets.merge(buckets)).to be_a(described_class)
@@ -186,6 +195,22 @@ describe NetworkResiliency::PowerStats do
 
       expect(buckets.n).to be 0
       expect(buckets.percentile(100)).to be 0
+    end
+  end
+
+  describe ".[]" do
+    it "creates new instances on demand" do
+      expect(described_class[:foo]).to be_a(described_class)
+      expect(described_class[:foo]).not_to be described_class[:bar]
+    end
+  end
+
+  describe ".reset" do
+    it "resets all instances" do
+      obj = described_class[:foo]
+      described_class.reset
+
+      expect(described_class[:foo]).not_to be obj
     end
   end
 end

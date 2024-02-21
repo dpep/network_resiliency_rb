@@ -5,10 +5,20 @@ using NetworkResiliency::Refinements
 module NetworkResiliency
   class PowerStats
     MIN_VALUE = 1
+    LOCK = Thread::Mutex.new
+    STATS = {}
 
     attr_reader :n
 
     class << self
+      def [](key)
+        LOCK.synchronize { STATS[key] ||= new }
+      end
+
+      def reset
+        LOCK.synchronize { STATS.clear }
+      end
+
       private
 
       def synchronize(fn_name)
@@ -72,6 +82,10 @@ module NetworkResiliency
       10 ** index
     end
     alias_method :p, :percentile
+
+    def p99
+      percentile(99)
+    end
 
     def merge(other)
       dup.merge!(other)
