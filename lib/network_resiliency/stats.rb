@@ -104,7 +104,7 @@ module NetworkResiliency
       @sq_dist = 0.0 # sum of squared distance from mean
     end
 
-    MIN_SAMPLE_SIZE = 1000
+    MIN_SAMPLE_SIZE = 300
     MAX_WINDOW_LENGTH = 1000
     STATS_TTL = 24 * 60 * 60 # 1 day
     CACHE_TTL = 120 # seconds
