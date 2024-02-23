@@ -1,3 +1,8 @@
+###  v0.7.12  (2024-02-23)
+- improve metric sampling
+- lower resiliency threshold
+- power buckets
+
 ###  v0.7.11  (2024-02-20)
 - lower dynamic timeout
 - fix metric specs
