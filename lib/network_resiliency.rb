@@ -20,7 +20,7 @@ module NetworkResiliency
   ACTIONS = [ :connect, :request ].freeze
   ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres, :rails ].freeze
   MODE = [ :observe, :resilient ].freeze
-  RESILIENCY_SIZE_THRESHOLD = 1_000
+  RESILIENCY_SIZE_THRESHOLD = 300
   SAMPLE_RATE = {
     timeout: 0.1,
     stats: 0.1,
