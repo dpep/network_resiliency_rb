@@ -39,3 +39,8 @@ Yes please  :)
 https://github.com/lostisland/faraday-retry/blob/main/lib/faraday/retry/middleware.rb
 
 https://github.com/ankane/the-ultimate-guide-to-ruby-timeouts
+
+
+https://reprep.io/writings/20220326_timeouts_deadline_propagation.html
+
+https://grpc.io/blog/deadlines
