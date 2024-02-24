@@ -50,7 +50,9 @@ module NetworkResiliency
       NetworkResiliency.redis.disconnect! if NetworkResiliency.redis.connected?
 
       until @shutdown
-        StatsEngine.sync(NetworkResiliency.redis)
+        NetworkResiliency.redis.with_reconnect do
+          StatsEngine.sync(NetworkResiliency.redis)
+        end
 
         sleep(SLEEP_DURATION)
       end
