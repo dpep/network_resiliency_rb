@@ -421,15 +421,7 @@ describe NetworkResiliency do
 
   describe ".record" do
     subject do
-      NetworkResiliency.record(
-        adapter: "adapter",
-        action: action,
-        destination: host,
-        duration: duration,
-        error: error,
-        timeout: timeout,
-        attempts: attempts,
-      )
+      record
 
       NetworkResiliency.statsd
     end
@@ -440,6 +432,38 @@ describe NetworkResiliency do
     let(:host) { "example.com" }
     let(:timeout) { 100 }
     let(:attempts) { 1 }
+
+    def record
+      NetworkResiliency.record(
+        adapter: "adapter",
+        action: action,
+        destination: host,
+        duration: duration,
+        error: error,
+        timeout: timeout,
+        attempts: attempts,
+      )
+    end
+
+    it "records the event" do
+      expect { subject }.to change { NetworkResiliency::StatsEngine::STATS.count }.by(1)
+    end
+
+    context "when there are many many events" do
+      before do
+        (NetworkResiliency::RESILIENCY_SIZE_THRESHOLD * 10).times { record }
+      end
+
+      let(:stats) do
+        key = NetworkResiliency::StatsEngine::STATS.keys.first
+        NetworkResiliency::StatsEngine.get(key)
+      end
+
+      it "downsamples" do
+        expect(stats.n).to be > NetworkResiliency::RESILIENCY_SIZE_THRESHOLD
+        expect(stats.n).to be < NetworkResiliency::RESILIENCY_SIZE_THRESHOLD * 5
+      end
+    end
 
     it "captures metric info" do
       is_expected.to have_received(:distribution).with(

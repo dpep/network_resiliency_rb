@@ -257,6 +257,12 @@ module NetworkResiliency
       # record stats
       key = [ adapter, action, destination ].join(":")
       stats = StatsEngine.add(key, duration)
+
+      if stats.n > RESILIENCY_SIZE_THRESHOLD * 4
+        # downsample to age out old stats
+        stats.scale!(50)
+      end
+
       tags = {
         adapter: adapter,
         destination: destination,
