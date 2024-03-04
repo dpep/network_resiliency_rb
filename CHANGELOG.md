@@ -1,3 +1,7 @@
+###  v0.7.13  (2024-03-04)
+- downsampling
+- redis resiliency
+
 ###  v0.7.12  (2024-02-23)
 - improve metric sampling
 - lower resiliency threshold
