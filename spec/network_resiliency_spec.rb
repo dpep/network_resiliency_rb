@@ -451,7 +451,7 @@ describe NetworkResiliency do
 
     context "when there are many many events" do
       before do
-        (NetworkResiliency::RESILIENCY_SIZE_THRESHOLD * 10).times { record }
+        (NetworkResiliency::RESILIENCY_THRESHOLD * 10).times { record }
       end
 
       let(:stats) do
@@ -460,8 +460,8 @@ describe NetworkResiliency do
       end
 
       it "downsamples" do
-        expect(stats.n).to be > NetworkResiliency::RESILIENCY_SIZE_THRESHOLD
-        expect(stats.n).to be < NetworkResiliency::RESILIENCY_SIZE_THRESHOLD * 5
+        expect(stats.n).to be > NetworkResiliency::RESILIENCY_THRESHOLD
+        expect(stats.n).to be < NetworkResiliency::RESILIENCY_THRESHOLD * 5
       end
     end
 
@@ -682,7 +682,7 @@ describe NetworkResiliency do
         stdev: 1,
       )
     end
-    let(:n) { described_class::RESILIENCY_SIZE_THRESHOLD }
+    let(:n) { described_class::RESILIENCY_THRESHOLD }
     let(:p99) { 10 }
     let(:max) { 100 }
     let(:units) { nil }
@@ -707,7 +707,7 @@ describe NetworkResiliency do
     end
 
     context "when n is too small" do
-      let(:n) { described_class::RESILIENCY_SIZE_THRESHOLD - 1 }
+      let(:n) { described_class::RESILIENCY_THRESHOLD - 1 }
 
       it { is_expected.to eq [ max ] }
     end

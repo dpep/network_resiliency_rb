@@ -20,7 +20,7 @@ module NetworkResiliency
   ACTIONS = [ :connect, :request ].freeze
   ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres, :rails ].freeze
   MODE = [ :observe, :resilient ].freeze
-  RESILIENCY_SIZE_THRESHOLD = 300
+  RESILIENCY_THRESHOLD = 300
   SAMPLE_RATE = {
     timeout: 0.1,
     stats: 0.1,
@@ -258,7 +258,7 @@ module NetworkResiliency
       key = [ adapter, action, destination ].join(":")
       stats = StatsEngine.add(key, duration)
 
-      if stats.n > RESILIENCY_SIZE_THRESHOLD * 4
+      if stats.n > RESILIENCY_THRESHOLD * 4
         # downsample to age out old stats
         stats.scale!(50)
       end
@@ -317,7 +317,7 @@ module NetworkResiliency
     key = [ adapter, action, destination ].join(":")
     stats = StatsEngine.get(key)
 
-    return default unless stats.n >= RESILIENCY_SIZE_THRESHOLD
+    return default unless stats.n >= RESILIENCY_THRESHOLD
 
     tags = {
       adapter: adapter,
