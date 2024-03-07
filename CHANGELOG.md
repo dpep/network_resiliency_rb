@@ -1,3 +1,7 @@
+###  v0.7.14  (2024-03-07)
+- lower dynamic timeout
+- timeout-min
+
 ###  v0.7.13  (2024-03-04)
 - downsampling
 - redis resiliency
