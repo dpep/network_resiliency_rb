@@ -1,3 +1,6 @@
+###  v0.7.15  (2024-03-08)
+- higher def timeouts
+
 ###  v0.7.14  (2024-03-07)
 - lower dynamic timeout
 - timeout-min
