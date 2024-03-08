@@ -21,7 +21,7 @@ module NetworkResiliency
   ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres, :rails ].freeze
   DEFAULT_TIMEOUT_MIN = 10 # ms
   MODE = [ :observe, :resilient ].freeze
-  RESILIENCY_THRESHOLD = 300
+  RESILIENCY_THRESHOLD = 100
   SAMPLE_RATE = {
     timeout: 0.1,
     stats: 0.1,
@@ -271,7 +271,7 @@ module NetworkResiliency
       key = [ adapter, action, destination ].join(":")
       stats = StatsEngine.add(key, duration)
 
-      if stats.n > RESILIENCY_THRESHOLD * 4
+      if stats.n > RESILIENCY_THRESHOLD * 5
         # downsample to age out old stats
         stats.scale!(50)
       end
@@ -338,8 +338,17 @@ module NetworkResiliency
       destination: destination,
     }
 
-    # p99 = (stats.avg + stats.stdev * 2).order_of_magnitude(ceil: true)
-    p99 = (stats.avg + stats.stdev * 3).power_ceil
+    p99 = (stats.avg + stats.stdev * 3)
+
+    # add margin of error / normalize
+    p99 = if stats.n >= RESILIENCY_THRESHOLD * 2
+      p99.power_ceil
+    else
+      # larger margin of error
+      p99.order_of_magnitude(ceil: true)
+    end
+
+    # enforce minimum timeout
     p99 = [ p99, timeout_min ].max
 
     timeouts = []

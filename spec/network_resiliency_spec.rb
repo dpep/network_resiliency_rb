@@ -461,7 +461,7 @@ describe NetworkResiliency do
 
       it "downsamples" do
         expect(stats.n).to be > NetworkResiliency::RESILIENCY_THRESHOLD
-        expect(stats.n).to be < NetworkResiliency::RESILIENCY_THRESHOLD * 5
+        expect(stats.n).to be < NetworkResiliency::RESILIENCY_THRESHOLD * 10
       end
     end
 
@@ -712,6 +712,15 @@ describe NetworkResiliency do
       let(:n) { described_class::RESILIENCY_THRESHOLD - 1 }
 
       it { is_expected.to eq [ max ] }
+    end
+
+    context "when n is large" do
+      let(:n) { described_class::RESILIENCY_THRESHOLD * 3 }
+      let(:p99) { 9 }
+
+      it "generates more granular timeouts" do
+        is_expected.to eq [ p99, max - p99 ]
+      end
     end
 
     context "when there is no max timeout" do
