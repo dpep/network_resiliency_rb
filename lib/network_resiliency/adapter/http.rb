@@ -6,10 +6,11 @@ module NetworkResiliency
       extend self
 
       ERRORS = [
-        Timeout::Error,
         IOError,
-        SystemCallError,
         (OpenSSL::OpenSSLError if defined?(OpenSSL::SSL)),
+        SocketError,
+        SystemCallError,
+        Timeout::Error,
       ].compact
 
       REQUEST_TIMEOUT_HEADER = "X-Request-Timeout"
