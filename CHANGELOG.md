@@ -1,3 +1,7 @@
+###  v0.8.0  (2024-03-12)
+- secondary timeout
+- cover http socket error
+
 ###  v0.7.15  (2024-03-08)
 - higher def timeouts
 
