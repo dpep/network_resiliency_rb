@@ -359,11 +359,16 @@ module NetworkResiliency
       if p99 < max
         timeouts << p99
 
-        # fallback attempt
-        if max - p99 > p99
+        # make a second, more lenient attempt
+
+        if p99 * 100 < max
+          # max is excessively high
+          timeouts << p99 * 100
+        elsif p99 * 10 < max
           # use remaining time for second attempt
           timeouts << max - p99
         else
+          # max is smallish
           timeouts << max
 
           NetworkResiliency.statsd&.increment(
@@ -385,10 +390,8 @@ module NetworkResiliency
     else
       timeouts << p99
 
-      # timeouts << p99 * 10 if NetworkResiliency.mode(action) == :resolute
-
-      # unbounded second attempt
-      timeouts << nil
+      # second attempt
+      timeouts << p99 * 100
 
       NetworkResiliency.statsd&.increment(
         "network_resiliency.timeout.missing",

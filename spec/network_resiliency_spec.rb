@@ -684,7 +684,7 @@ describe NetworkResiliency do
     end
     let(:n) { described_class::RESILIENCY_THRESHOLD }
     let(:p99) { 10 }
-    let(:max) { 100 }
+    let(:max) { 1_000 }
     let(:units) { nil }
     let(:timeout_min) { 0 }
 
@@ -719,15 +719,15 @@ describe NetworkResiliency do
       let(:p99) { 9 }
 
       it "generates more granular timeouts" do
-        is_expected.to eq [ p99, max - p99 ]
+        is_expected.to eq [ p99, p99 * 100 ]
       end
     end
 
     context "when there is no max timeout" do
       let(:max) { nil }
 
-      it "should make one attempt with a timeout and one unbounded attempt" do
-        is_expected.to eq [ p99, nil ]
+      it "should make two attempts with timeouts" do
+        is_expected.to eq [ p99, p99 * 100 ]
       end
     end
 
@@ -755,9 +755,7 @@ describe NetworkResiliency do
     end
 
     context "when the max timeout is similarly sized to the p99" do
-      let(:max) { p99 * 1.5 }
-
-      specify { expect(max - p99).to be < p99 }
+      let(:max) { p99 * 10 }
 
       it "makes two attempts, using the max as the second" do
         is_expected.to eq [ p99, max ]
@@ -777,7 +775,7 @@ describe NetworkResiliency do
       let(:timeout_min) { 50 }
 
       it "falls back to the timeout_min" do
-        is_expected.to eq [ described_class.timeout_min, max ]
+        is_expected.to eq [ described_class.timeout_min, max - timeout_min ]
       end
     end
 
