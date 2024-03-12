@@ -695,7 +695,7 @@ describe NetworkResiliency do
     end
 
     it "makes two attempts" do
-      is_expected.to eq [ p99, max - p99 ]
+      is_expected.to eq [ p99, p99 * 10 ]
     end
 
     it "does not exceed the max timeout" do
@@ -719,7 +719,7 @@ describe NetworkResiliency do
       let(:p99) { 9 }
 
       it "generates more granular timeouts" do
-        is_expected.to eq [ p99, p99 * 100 ]
+        is_expected.to eq [ p99, p99 * 10 ]
       end
     end
 
@@ -727,7 +727,7 @@ describe NetworkResiliency do
       let(:max) { nil }
 
       it "should make two attempts with timeouts" do
-        is_expected.to eq [ p99, p99 * 100 ]
+        is_expected.to eq [ p99, p99 * 10 ]
       end
     end
 
@@ -755,7 +755,7 @@ describe NetworkResiliency do
     end
 
     context "when the max timeout is similarly sized to the p99" do
-      let(:max) { p99 * 10 }
+      let(:max) { p99 * 3 }
 
       it "makes two attempts, using the max as the second" do
         is_expected.to eq [ p99, max ]
@@ -775,7 +775,7 @@ describe NetworkResiliency do
       let(:timeout_min) { 50 }
 
       it "falls back to the timeout_min" do
-        is_expected.to eq [ described_class.timeout_min, max - timeout_min ]
+        is_expected.to eq [ described_class.timeout_min, timeout_min * 10 ]
       end
     end
 
