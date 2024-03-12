@@ -1,3 +1,6 @@
+###  v0.8.1  (2024-03-12)
+- lower secondary timeout
+
 ###  v0.8.0  (2024-03-12)
 - secondary timeout
 - cover http socket error
