@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    network_resiliency (0.8.1)
+    network_resiliency (0.8.2)
 
 GEM
   remote: https://rubygems.org/

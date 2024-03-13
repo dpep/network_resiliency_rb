@@ -1,3 +1,7 @@
+###  v0.8.2  (2024-03-13)
+- revert ddog sampling
+- Revert "lower secondary timeout"
+
 ###  v0.8.1  (2024-03-12)
 - lower secondary timeout
 
