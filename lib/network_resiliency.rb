@@ -362,13 +362,11 @@ module NetworkResiliency
         # make a second, more lenient attempt
 
         if p99 * 100 < max
-          # max is excessively high
           timeouts << p99 * 100
         elsif p99 * 10 < max
           # use remaining time for second attempt
           timeouts << max - p99
         else
-          # max is smallish
           timeouts << max
 
           NetworkResiliency.statsd&.increment(
