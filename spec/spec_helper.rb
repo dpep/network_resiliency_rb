@@ -49,9 +49,6 @@ RSpec.configure do |config|
     # disable background sync
     allow(NetworkResiliency::Syncer).to receive(:start)
 
-    # disable metric sampling for specs
-    stub_const("NetworkResiliency::SAMPLE_RATE", Hash.new(1))
-
     # since Timecop doesn't work with Process.clock_gettime
     allow(Process).to receive(:clock_gettime).and_return(*(1..1_000))
 

@@ -22,11 +22,6 @@ module NetworkResiliency
   DEFAULT_TIMEOUT_MIN = 10 # ms
   MODE = [ :observe, :resilient ].freeze
   RESILIENCY_THRESHOLD = 100
-  SAMPLE_RATE = {
-    timeout: 0.1,
-    stats: 0.1,
-    sync: 0.1,
-  }
 
   extend self
 
@@ -254,7 +249,6 @@ module NetworkResiliency
         adapter: adapter,
         destination: destination,
       },
-      sample_rate: SAMPLE_RATE[:timeout],
     ) if timeout && timeout > 0
 
     if error
@@ -286,28 +280,23 @@ module NetworkResiliency
       # ensure Syncer is running
       Syncer.start
 
-      if rand < SAMPLE_RATE[:stats]
-        NetworkResiliency.statsd&.distribution(
-          "network_resiliency.#{action}.stats.n",
-          stats.n,
-          tags: tags,
-          sample_rate: SAMPLE_RATE[:stats],
-        )
+      NetworkResiliency.statsd&.distribution(
+        "network_resiliency.#{action}.stats.n",
+        stats.n,
+        tags: tags,
+      )
 
-        NetworkResiliency.statsd&.distribution(
-          "network_resiliency.#{action}.stats.avg",
-          stats.avg,
-          tags: tags,
-          sample_rate: SAMPLE_RATE[:stats],
-        )
+      NetworkResiliency.statsd&.distribution(
+        "network_resiliency.#{action}.stats.avg",
+        stats.avg,
+        tags: tags,
+      )
 
-        NetworkResiliency.statsd&.distribution(
-          "network_resiliency.#{action}.stats.stdev",
-          stats.stdev,
-          tags: tags,
-          sample_rate: SAMPLE_RATE[:stats],
-        )
-      end
+      NetworkResiliency.statsd&.distribution(
+        "network_resiliency.#{action}.stats.stdev",
+        stats.stdev,
+        tags: tags,
+      )
     end
 
     nil
@@ -372,8 +361,7 @@ module NetworkResiliency
           NetworkResiliency.statsd&.increment(
             "network_resiliency.timeout.raised",
             tags: tags,
-            sample_rate: SAMPLE_RATE[:timeout],
-          ) if rand < SAMPLE_RATE[:timeout]
+          )
         end
       else
         # the specified timeout is less than our expected p99...awkward
@@ -382,8 +370,7 @@ module NetworkResiliency
         NetworkResiliency.statsd&.increment(
           "network_resiliency.timeout.too_low",
           tags: tags,
-          sample_rate: SAMPLE_RATE[:timeout],
-        ) if rand < SAMPLE_RATE[:timeout]
+        )
       end
     else
       timeouts << p99
@@ -394,8 +381,7 @@ module NetworkResiliency
       NetworkResiliency.statsd&.increment(
         "network_resiliency.timeout.missing",
         tags: tags,
-        sample_rate: SAMPLE_RATE[:timeout],
-      ) if rand < SAMPLE_RATE[:timeout]
+      )
     end
 
     NetworkResiliency.statsd&.distribution(
@@ -405,8 +391,7 @@ module NetworkResiliency
         adapter: adapter,
         destination: destination,
       },
-      sample_rate: SAMPLE_RATE[:timeout],
-    ) if rand < SAMPLE_RATE[:timeout]
+    )
 
     case units
     when nil, :ms, :milliseconds

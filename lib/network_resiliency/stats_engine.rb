@@ -65,13 +65,11 @@ module NetworkResiliency
           empty: data.empty?,
           truncated: data.size < dirty_keys.size,
         }.select { |_, v| v },
-        sample_rate: SAMPLE_RATE[:sync],
       )
 
       NetworkResiliency.statsd&.distribution(
         "network_resiliency.sync.keys.dirty",
         dirty_keys.select { |_, n| n > 0 }.count,
-        sample_rate: SAMPLE_RATE[:sync],
       )
 
       return [] if data.empty?

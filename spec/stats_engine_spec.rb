@@ -132,7 +132,6 @@ describe NetworkResiliency::StatsEngine do
           is_expected.to have_received(:distribution).with(
             "network_resiliency.sync.keys.dirty",
             1,
-            anything,
           )
         end
       end
@@ -150,7 +149,6 @@ describe NetworkResiliency::StatsEngine do
           is_expected.to have_received(:distribution).with(
             "network_resiliency.sync.keys.dirty",
             1,
-            anything,
           )
         end
 
