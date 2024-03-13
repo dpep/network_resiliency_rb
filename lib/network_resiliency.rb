@@ -361,9 +361,14 @@ module NetworkResiliency
 
         # make a second, more lenient attempt
 
-        if p99 * 10 < max
-          timeouts << p99 * 10
+        if p99 * 100 < max
+          # max is excessively high
+          timeouts << p99 * 100
+        elsif p99 * 10 < max
+          # use remaining time for second attempt
+          timeouts << max - p99
         else
+          # max is smallish
           timeouts << max
 
           NetworkResiliency.statsd&.increment(
@@ -386,7 +391,7 @@ module NetworkResiliency
       timeouts << p99
 
       # second attempt
-      timeouts << p99 * 10
+      timeouts << p99 * 100
 
       NetworkResiliency.statsd&.increment(
         "network_resiliency.timeout.missing",
