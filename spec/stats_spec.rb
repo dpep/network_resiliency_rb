@@ -296,6 +296,35 @@ describe NetworkResiliency::Stats do
     end
   end
 
+  describe '#scale!' do
+    before { 100.times { stats << choose } }
+
+    it "scales n" do
+      expect(stats.n).to eq 100
+      stats.scale!(50)
+      expect(stats.n).to eq 50
+
+      stats.scale!(10)
+      expect(stats.n).to eq 5
+    end
+
+    it "rounds and returns the new n" do
+      expect(stats.scale!(33.33)).to eq 33
+      expect(stats.n).to eq 33
+    end
+
+    it "does not effect avg, variance, and stdev" do
+      avg = stats.avg
+      variance = stats.variance
+      std = stats.stdev
+      stats.scale!(50)
+
+      expect(avg).to eq stats.avg
+      expect(variance).to eq stats.variance
+      expect(std).to eq stats.stdev
+    end
+  end
+
   describe "#variance" do
     before { stats << 1_000.times.map { choose } }
 

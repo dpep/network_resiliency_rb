@@ -1,3 +1,4 @@
+require "network_resiliency/power_stats"
 require "network_resiliency/refinements"
 require "network_resiliency/stats"
 require "network_resiliency/stats_engine"
@@ -18,8 +19,9 @@ module NetworkResiliency
 
   ACTIONS = [ :connect, :request ].freeze
   ADAPTERS = [ :http, :faraday, :redis, :mysql, :postgres, :rails ].freeze
+  DEFAULT_TIMEOUT_MIN = 10 # ms
   MODE = [ :observe, :resilient ].freeze
-  RESILIENCY_SIZE_THRESHOLD = 1_000
+  RESILIENCY_THRESHOLD = 100
 
   extend self
 
@@ -27,8 +29,6 @@ module NetworkResiliency
 
   def configure
     yield self if block_given?
-
-    Syncer.start(redis) if redis
 
     unless @patched
       # patch everything that's available
@@ -123,15 +123,7 @@ module NetworkResiliency
 
     mode
   rescue => e
-    NetworkResiliency.statsd&.increment(
-      "network_resiliency.error",
-      tags: {
-        method: __method__,
-        type: e.class,
-      },
-    )
-
-    warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
+    warn(__method__, e)
 
     :observe
   end
@@ -220,6 +212,18 @@ module NetworkResiliency
     end
   end
 
+  def timeout_min=(val)
+    unless val.nil? || val.is_a?(Numeric)
+      raise ArgumentError, "invalid timeout_min: #{val}"
+    end
+
+    @timeout_min = val
+  end
+
+  def timeout_min
+    @timeout_min || DEFAULT_TIMEOUT_MIN
+  end
+
   # private
 
   def record(adapter:, action:, destination:, duration:, error:, timeout:, attempts: 1)
@@ -238,7 +242,7 @@ module NetworkResiliency
       }.compact,
     )
 
-    NetworkResiliency.statsd&.gauge(
+    NetworkResiliency.statsd&.distribution(
       "network_resiliency.#{action}.timeout",
       timeout,
       tags: {
@@ -260,12 +264,21 @@ module NetworkResiliency
       # record stats
       key = [ adapter, action, destination ].join(":")
       stats = StatsEngine.add(key, duration)
+
+      if stats.n > RESILIENCY_THRESHOLD * 5
+        # downsample to age out old stats
+        stats.scale!(50)
+      end
+
       tags = {
         adapter: adapter,
         destination: destination,
         n: stats.n.order_of_magnitude,
         sync: Syncer.syncing?,
       }
+
+      # ensure Syncer is running
+      Syncer.start
 
       NetworkResiliency.statsd&.distribution(
         "network_resiliency.#{action}.stats.n",
@@ -288,15 +301,7 @@ module NetworkResiliency
 
     nil
   rescue => e
-    NetworkResiliency.statsd&.increment(
-      "network_resiliency.error",
-      tags: {
-        method: __method__,
-        type: e.class,
-      },
-    )
-
-    warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
+    warn(__method__, e)
   end
 
   IP_ADDRESS_REGEX = /\d{1,3}(\.\d{1,3}){3}/
@@ -314,7 +319,7 @@ module NetworkResiliency
     key = [ adapter, action, destination ].join(":")
     stats = StatsEngine.get(key)
 
-    return default unless stats.n >= RESILIENCY_SIZE_THRESHOLD
+    return default unless stats.n >= RESILIENCY_THRESHOLD
 
     tags = {
       adapter: adapter,
@@ -322,7 +327,18 @@ module NetworkResiliency
       destination: destination,
     }
 
-    p99 = (stats.avg + stats.stdev * 3).order_of_magnitude(ceil: true)
+    p99 = (stats.avg + stats.stdev * 3)
+
+    # add margin of error / normalize
+    p99 = if stats.n >= RESILIENCY_THRESHOLD * 2
+      p99.power_ceil
+    else
+      # larger margin of error
+      p99.order_of_magnitude(ceil: true)
+    end
+
+    # enforce minimum timeout
+    p99 = [ p99, timeout_min ].max
 
     timeouts = []
 
@@ -332,8 +348,11 @@ module NetworkResiliency
       if p99 < max
         timeouts << p99
 
-        # fallback attempt
-        if max - p99 > p99
+        # make a second, more lenient attempt
+
+        if p99 * 100 < max
+          timeouts << p99 * 100
+        elsif p99 * 10 < max
           # use remaining time for second attempt
           timeouts << max - p99
         else
@@ -356,10 +375,8 @@ module NetworkResiliency
     else
       timeouts << p99
 
-      # timeouts << p99 * 10 if NetworkResiliency.mode(action) == :resolute
-
-      # unbounded second attempt
-      timeouts << nil
+      # second attempt
+      timeouts << p99 * 100
 
       NetworkResiliency.statsd&.increment(
         "network_resiliency.timeout.missing",
@@ -385,15 +402,7 @@ module NetworkResiliency
       raise ArgumentError, "invalid units: #{units}"
     end
   rescue => e
-    NetworkResiliency.statsd&.increment(
-      "network_resiliency.error",
-      tags: {
-        method: __method__,
-        type: e.class,
-      },
-    )
-
-    warn "[ERROR] NetworkResiliency: #{e.class}: #{e.message}"
+    warn(__method__, e)
 
     default
   end
@@ -403,6 +412,7 @@ module NetworkResiliency
     @mode = nil
     @normalize_request = nil
     @patched = nil
+    @timeout_min = nil
     Thread.current["network_resiliency"] = nil
     StatsEngine.reset
     Syncer.stop
@@ -412,5 +422,17 @@ module NetworkResiliency
 
   def thread_state
     Thread.current["network_resiliency"] ||= {}
+  end
+
+  def warn(method, e)
+    NetworkResiliency.statsd&.increment(
+      "network_resiliency.error",
+      tags: {
+        method: method,
+        type: e.class,
+      },
+    )
+
+    Kernel.warn "[ERROR] NetworkResiliency #{method}: #{e.class}: #{e.message}"
   end
 end

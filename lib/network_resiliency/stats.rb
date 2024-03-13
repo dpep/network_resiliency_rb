@@ -80,6 +80,16 @@ module NetworkResiliency
       self
     end
 
+    synchronize def scale!(percentage)
+      raise ArgumentError, "Numeric expected, found #{percentage.class}" unless percentage.is_a?(Numeric)
+      raise ArgumentError, "argument must be between 0 and 100" unless percentage.between?(0, 100)
+
+      factor = percentage / 100.0
+
+      @sq_dist *= factor
+      @n = (@n * factor).round
+    end
+
     def ==(other)
       return false unless other.is_a?(self.class)
 
@@ -94,10 +104,10 @@ module NetworkResiliency
       @sq_dist = 0.0 # sum of squared distance from mean
     end
 
-    MIN_SAMPLE_SIZE = 1000
+    MIN_SAMPLE_SIZE = 300
     MAX_WINDOW_LENGTH = 1000
     STATS_TTL = 24 * 60 * 60 # 1 day
-    CACHE_TTL = 60 # seconds
+    CACHE_TTL = 120 # seconds
 
     LUA_SCRIPT = <<~LUA
       local results = {}
@@ -189,11 +199,9 @@ module NetworkResiliency
       end
 
       res = redis.eval(LUA_SCRIPT, keys, args)
-      data.keys.zip(res.each_slice(3)).map do |key, stats|
-        n, avg, sq_dist = *stats
-
-        [ key, Stats.from(n: n, avg: avg, sq_dist: sq_dist) ]
-      end.to_h
+      data.keys.zip(res.each_slice(3)).to_h.transform_values! do |n, avg, sq_dist|
+        Stats.from(n: n, avg: avg, sq_dist: sq_dist)
+      end
     end
 
     def self.fetch(redis, keys)

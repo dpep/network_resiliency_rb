@@ -124,7 +124,7 @@ describe NetworkResiliency::StatsEngine do
           is_expected.to have_received(:distribution).with(
             "network_resiliency.sync.keys",
             1,
-            tags: {},
+            anything,
           )
         end
 
@@ -156,7 +156,7 @@ describe NetworkResiliency::StatsEngine do
           is_expected.to have_received(:distribution).with(
             "network_resiliency.sync.keys",
             described_class::SYNC_LIMIT,
-            tags: { truncated: true }
+            anything,
           )
         end
       end

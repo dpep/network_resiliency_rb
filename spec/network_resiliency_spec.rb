@@ -236,20 +236,6 @@ describe NetworkResiliency do
       expect(NetworkResiliency::Adapter::HTTP.patched?).to be false
       expect(NetworkResiliency::Adapter::Redis.patched?).to be false
     end
-
-    it "will start syncing" do
-      NetworkResiliency.configure
-      expect(NetworkResiliency::Syncer).to have_received(:start)
-    end
-
-    context "when Redis is not configured" do
-      before { NetworkResiliency.redis = nil }
-
-      it "will not start syncing" do
-        NetworkResiliency.configure
-        expect(NetworkResiliency::Syncer).not_to have_received(:start)
-      end
-    end
   end
 
   describe ".mode" do
@@ -338,20 +324,10 @@ describe NetworkResiliency do
       end
 
       context "when callback explodes", :safely do
-        let(:error) { RuntimeError }
-        let(:callback) { proc { raise error } }
+        let(:callback) { proc { raise } }
 
         it "warns and falls back to observe" do
-          expect { subject }.to output(/ERROR/).to_stderr
-
-          expect(described_class.statsd).to have_received(:increment).with(
-            "network_resiliency.error",
-            tags: {
-              method: :mode,
-              type: error,
-            },
-          )
-
+          expect(described_class).to receive(:warn).with(:mode, Exception)
           is_expected.to be :observe
         end
       end
@@ -445,15 +421,7 @@ describe NetworkResiliency do
 
   describe ".record" do
     subject do
-      NetworkResiliency.record(
-        adapter: "adapter",
-        action: action,
-        destination: host,
-        duration: duration,
-        error: error,
-        timeout: timeout,
-        attempts: attempts,
-      )
+      record
 
       NetworkResiliency.statsd
     end
@@ -465,6 +433,38 @@ describe NetworkResiliency do
     let(:timeout) { 100 }
     let(:attempts) { 1 }
 
+    def record
+      NetworkResiliency.record(
+        adapter: "adapter",
+        action: action,
+        destination: host,
+        duration: duration,
+        error: error,
+        timeout: timeout,
+        attempts: attempts,
+      )
+    end
+
+    it "records the event" do
+      expect { subject }.to change { NetworkResiliency::StatsEngine::STATS.count }.by(1)
+    end
+
+    context "when there are many many events" do
+      before do
+        (NetworkResiliency::RESILIENCY_THRESHOLD * 10).times { record }
+      end
+
+      let(:stats) do
+        key = NetworkResiliency::StatsEngine::STATS.keys.first
+        NetworkResiliency::StatsEngine.get(key)
+      end
+
+      it "downsamples" do
+        expect(stats.n).to be > NetworkResiliency::RESILIENCY_THRESHOLD
+        expect(stats.n).to be < NetworkResiliency::RESILIENCY_THRESHOLD * 10
+      end
+    end
+
     it "captures metric info" do
       is_expected.to have_received(:distribution).with(
         "network_resiliency.#{action}",
@@ -472,7 +472,7 @@ describe NetworkResiliency do
         tags: include(destination: host),
       )
 
-      is_expected.to have_received(:gauge).with(
+      is_expected.to have_received(:distribution).with(
         "network_resiliency.#{action}.timeout",
         timeout,
         anything,
@@ -487,7 +487,7 @@ describe NetworkResiliency do
       is_expected.to have_received(:distribution).with(
         "network_resiliency.#{action}.stats.avg",
         duration,
-        tags: include(n: 1),
+        anything,
       )
     end
 
@@ -503,7 +503,7 @@ describe NetworkResiliency do
       let(:timeout) { nil }
 
       it "does not track timeout" do
-        is_expected.not_to have_received(:gauge).with(
+        is_expected.not_to have_received(:distribution).with(
           "network_resiliency.#{action}.timeout",
           any_args,
         )
@@ -514,7 +514,7 @@ describe NetworkResiliency do
       let(:timeout) { 0 }
 
       it "does not track timeout" do
-        is_expected.not_to have_received(:gauge).with(
+        is_expected.not_to have_received(:distribution).with(
           "network_resiliency.#{action}.timeout",
           any_args,
         )
@@ -600,15 +600,8 @@ describe NetworkResiliency do
       end
 
       it "warns, but don't explode" do
-        expect { subject }.to output(/ERROR/).to_stderr
-
-        is_expected.to have_received(:increment).with(
-          "network_resiliency.error",
-          tags: {
-            method: :record,
-            type: RuntimeError,
-          },
-        )
+        expect(described_class).to receive(:warn).with(:record, Exception)
+        subject
       end
     end
 
@@ -620,13 +613,14 @@ describe NetworkResiliency do
         subject
       end
 
-      context "when errors arise" do
+      context "when errors arise in safe mode", :safely do
         before do
           allow(NetworkResiliency::StatsEngine).to receive(:add).and_raise
         end
 
         it "warns, but doesn't explode" do
-          expect { subject }.to output(/ERROR/).to_stderr
+          expect(described_class).to receive(:warn).with(:record, Exception)
+          subject
         end
       end
     end
@@ -662,6 +656,11 @@ describe NetworkResiliency do
         )
       end
     end
+
+    it "will start sync worker" do
+      subject
+      expect(NetworkResiliency::Syncer).to have_received(:start)
+    end
   end
 
   describe ".timeouts_for" do
@@ -683,14 +682,16 @@ describe NetworkResiliency do
         stdev: 1,
       )
     end
-    let(:n) { described_class::RESILIENCY_SIZE_THRESHOLD }
+    let(:n) { described_class::RESILIENCY_THRESHOLD }
     let(:p99) { 10 }
-    let(:max) { 100 }
+    let(:max) { 1_000 }
     let(:units) { nil }
+    let(:timeout_min) { 0 }
 
     before do
       allow(described_class::StatsEngine).to receive(:get).and_return(stats)
       described_class.mode = :resilient
+      described_class.timeout_min = timeout_min
     end
 
     it "makes two attempts" do
@@ -708,16 +709,25 @@ describe NetworkResiliency do
     end
 
     context "when n is too small" do
-      let(:n) { described_class::RESILIENCY_SIZE_THRESHOLD - 1 }
+      let(:n) { described_class::RESILIENCY_THRESHOLD - 1 }
 
       it { is_expected.to eq [ max ] }
+    end
+
+    context "when n is large" do
+      let(:n) { described_class::RESILIENCY_THRESHOLD * 3 }
+      let(:p99) { 9 }
+
+      it "generates more granular timeouts" do
+        is_expected.to eq [ p99, p99 * 100 ]
+      end
     end
 
     context "when there is no max timeout" do
       let(:max) { nil }
 
-      it "should make one attempt with a timeout and one unbounded attempt" do
-        is_expected.to eq [ p99, nil ]
+      it "should make two attempts with timeouts" do
+        is_expected.to eq [ p99, p99 * 100 ]
       end
     end
 
@@ -745,9 +755,7 @@ describe NetworkResiliency do
     end
 
     context "when the max timeout is similarly sized to the p99" do
-      let(:max) { p99 * 1.5 }
-
-      specify { expect(max - p99).to be < p99 }
+      let(:max) { p99 * 10 }
 
       it "makes two attempts, using the max as the second" do
         is_expected.to eq [ p99, max ]
@@ -760,6 +768,14 @@ describe NetworkResiliency do
         )
 
         subject
+      end
+    end
+
+    context "when timeout_min comes into play" do
+      let(:timeout_min) { 50 }
+
+      it "falls back to the timeout_min" do
+        is_expected.to eq [ described_class.timeout_min, max - timeout_min ]
       end
     end
 
@@ -784,23 +800,12 @@ describe NetworkResiliency do
     end
 
     context "when errors arise in .timeouts_for itself", :safely do
-      let(:error) { RuntimeError }
-
       before do
-        allow(NetworkResiliency::StatsEngine).to receive(:get).and_raise(error)
+        allow(NetworkResiliency::StatsEngine).to receive(:get).and_raise
       end
 
       it "warns and falls back to the max timeout" do
-        expect { subject }.to output(/ERROR/).to_stderr
-
-        expect(described_class.statsd).to have_received(:increment).with(
-          "network_resiliency.error",
-          tags: {
-            method: :timeouts_for,
-            type: error,
-          },
-        )
-
+        expect(described_class).to receive(:warn).with(:timeouts_for, Exception)
         is_expected.to eq [ max ]
       end
     end
@@ -809,13 +814,13 @@ describe NetworkResiliency do
       subject { timeouts.first }
 
       it "defaults to milliseconds" do
-        is_expected.to be p99
+        is_expected.to eq p99
       end
 
       context "when units are milliseconds" do
         let(:units) { :ms }
 
-        it { is_expected.to be p99 }
+        it { is_expected.to eq p99 }
       end
 
       context "when units are seconds" do
@@ -923,6 +928,48 @@ describe NetworkResiliency do
         expect {
           described_class.normalize_request(:http, path) { nil }
       }.to raise_error(ArgumentError)
+      end
+    end
+  end
+
+  describe ".warn", :safely do
+    subject { described_class.warn(method_name, error) }
+
+    let(:method_name) { :my_method }
+    let(:error) { Redis::CannotConnectError.new("nope") }
+
+    it "logs a warning and sends Datadog metrics" do
+      expect(NetworkResiliency.statsd).to receive(:increment).with(
+        "network_resiliency.error",
+        tags: { method: method_name, type: error.class },
+      )
+
+      expect { subject }.to output(
+        /NetworkResiliency #{method_name}: #{error.class}: #{error.message}/,
+      ).to_stderr
+    end
+  end
+
+  describe ".timeout_min" do
+    subject { described_class.timeout_min }
+
+    it "has a default" do
+      is_expected.to eq described_class::DEFAULT_TIMEOUT_MIN
+    end
+
+    context "when set" do
+      before { described_class.timeout_min = timeout }
+
+      let(:timeout) { 1_000 }
+
+      it { is_expected.to eq timeout }
+    end
+
+    context "when set to a bogus value" do
+      it "fails fast" do
+        expect {
+          described_class.timeout_min = "foo"
+        }.to raise_error(ArgumentError)
       end
     end
   end

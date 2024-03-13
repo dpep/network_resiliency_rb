@@ -1,20 +1,29 @@
 module NetworkResiliency
   class Syncer < Thread
-    class << self
-      def start(redis)
-        NetworkResiliency.statsd&.increment("network_resiliency.syncer.start")
+    LOCK = Mutex.new
+    SLEEP_DURATION = 10
 
-        stop if @instance
-        @instance = new(redis)
+    class << self
+      def start
+        return unless NetworkResiliency.redis
+
+        LOCK.synchronize do
+          unless @instance&.alive?
+            @instance = new
+            NetworkResiliency.statsd&.increment("network_resiliency.syncer.start")
+          end
+
+          @instance
+        end
       end
 
       def stop
-        NetworkResiliency.statsd&.increment("network_resiliency.syncer.stop")
-
-        if @instance
-          @instance.shutdown
-          @instance.join
-          @instance = nil
+        LOCK.synchronize do
+          if @instance
+            @instance.shutdown
+            @instance.join
+            @instance = nil
+          end
         end
       end
 
@@ -23,9 +32,7 @@ module NetworkResiliency
       end
     end
 
-    def initialize(redis)
-      @redis = redis
-
+    def initialize
       super { sync }
     end
 
@@ -33,20 +40,25 @@ module NetworkResiliency
       @shutdown = true
 
       # prevent needless delay
-      raise Interrupt if status == "sleep"
+      self.raise Interrupt if status == "sleep"
     end
 
     private
 
     def sync
+      # force redis to reconnect post fork
+      NetworkResiliency.redis.disconnect! if NetworkResiliency.redis.connected?
+
       until @shutdown
-        NetworkResiliency.statsd&.increment("network_resiliency.syncer.sync")
+        NetworkResiliency.redis.with_reconnect do
+          StatsEngine.sync(NetworkResiliency.redis)
+        end
 
-        StatsEngine.sync(@redis)
-
-        sleep(3)
+        sleep(SLEEP_DURATION)
       end
     rescue Interrupt
+    rescue => e
+      NetworkResiliency.warn(__method__, e)
     end
   end
 end

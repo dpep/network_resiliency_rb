@@ -1,3 +1,48 @@
+###  v0.8.2  (2024-03-13)
+- revert ddog sampling
+- Revert "lower secondary timeout"
+
+###  v0.8.1  (2024-03-12)
+- lower secondary timeout
+
+###  v0.8.0  (2024-03-12)
+- secondary timeout
+- cover http socket error
+
+###  v0.7.15  (2024-03-08)
+- higher def timeouts
+
+###  v0.7.14  (2024-03-07)
+- lower dynamic timeout
+- timeout-min
+
+###  v0.7.13  (2024-03-04)
+- downsampling
+- redis resiliency
+
+###  v0.7.12  (2024-02-23)
+- improve metric sampling
+- lower resiliency threshold
+- power buckets
+
+###  v0.7.11  (2024-02-20)
+- lower dynamic timeout
+- fix metric specs
+- extend cache ttl
+
+###  v0.7.10  (2024-02-15)
+- ddog sampling
+- reconnect redis
+- sync logging
+- warn method
+
+###  v0.7.9  (2024-02-07)
+- sync frequency
+
+###  v0.7.8  (2024-02-07)
+- lazy syncing
+- timeout metric
+
 ###  v0.7.7  (2024-01-23)
 - syncer stats
 
