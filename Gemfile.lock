@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    network_resiliency (0.8.2)
+    network_resiliency (0.0.1)
 
 GEM
   remote: https://rubygems.org/
@@ -166,7 +166,7 @@ GEM
     nokogiri (1.16.3)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
-    pg (1.5.4)
+    pg (1.5.6)
     psych (5.1.2)
       stringio
     racc (1.7.3)
