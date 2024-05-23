@@ -1,0 +1,64 @@
+# Ruby CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-ruby/ for more details
+#
+version: 2.1
+
+# Constants / Config values
+# Note: Please don't modify the structure of this section as it will break automated tooling
+build-config:
+  standard:
+    ruby-version: &ruby-version "3.2"
+    ruby-test-matrix: &ruby-test-matrix ["3.1", *ruby-version]
+  custom:
+    test-env-variables: &test-env-variables |
+      # add your test ENV variables here
+
+orbs:
+  cit: chime/cit@1
+
+workflows:
+  version: 2
+  rubygem-package:
+    jobs:
+      - cit/bundler-build:
+          context: ruby-build
+          ruby-version: *ruby-version
+      - cit/rubocop:
+          context: ruby-build
+          ruby-version: *ruby-version
+          requires:
+            - cit/bundler-build
+      - cit/rspec:
+          matrix:
+            alias: cit/rspec-matrix
+            parameters:
+              ruby-version: *ruby-test-matrix
+          name: cit/rspec-ruby-<< matrix.ruby-version >>
+          context: ruby-build
+          # You can change the image-config parameter and possibly up the resource-class as well to medium if you
+          # need to additional containers for testing (e.g. a database or LocalStack), the default image-config is "basic"
+          # image-config: basic
+          # You can increase test parallelism to optimize test runtime:
+          # https://circleci.com/docs/parallelism-faster-jobs/
+          # Note that:
+          # * Increasing parallelism comes with extra cost for the execution, so we don't recommend to increase it until your tests run > 2-3min
+          # * You need to take a closer look at your individual test run times, because if just a few long running tests are responsible for the total
+          #   runtime increase, increasing parallelism will not make a difference in runtime, but just increase execution cost
+          parallelism: 1
+          env-variables: *test-env-variables
+          requires:
+            - cit/bundler-build
+      - cit/test-coverage:
+          requires:
+            - cit/rspec-matrix
+      - cit/gem-publish:
+          context: gem-publish
+          ruby-version: *ruby-version
+          requires:
+            - cit/rspec-matrix
+          filters:
+            branches:
+              only:
+                - main
+                - /^pre-.*/
