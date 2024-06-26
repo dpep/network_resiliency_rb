@@ -8,7 +8,7 @@ module Helpers
     def mock_mysql
       # raise Mysql2::Error::TimeoutError.new("fake timeout", nil, error_number = 1205)
 
-      File.delete(SOCKET_PATH) if File.exists?(SOCKET_PATH)
+      File.delete(SOCKET_PATH) if File.exist?(SOCKET_PATH)
 
       server = UNIXServer.new(SOCKET_PATH)
 
@@ -36,6 +36,6 @@ RSpec.configure do |config|
 
   config.after(mock_mysql: true) do
     # clean up socket file
-    File.delete(Helpers::MockMysql::SOCKET_PATH) if File.exists?(Helpers::MockMysql::SOCKET_PATH)
+    File.delete(Helpers::MockMysql::SOCKET_PATH) if File.exist?(Helpers::MockMysql::SOCKET_PATH)
   end
 end
