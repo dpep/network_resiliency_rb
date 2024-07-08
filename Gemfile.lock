@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    network_resiliency (0.8.2)
+    network_resiliency (0.0.1)
 
 GEM
   remote: https://rubygems.org/
@@ -170,7 +170,7 @@ GEM
     psych (5.1.2)
       stringio
     racc (1.8.0)
-    rack (3.1.4)
+    rack (3.1.6)
     rack-session (2.0.0)
       rack (>= 3.0.0)
     rack-test (2.1.0)
