@@ -3,9 +3,10 @@ NetworkResiliency
 ![Gem](https://img.shields.io/gem/dt/network_resiliency?style=plastic)
 [![codecov](https://codecov.io/gh/dpep/network_resiliency_rb/branch/main/graph/badge.svg)](https://codecov.io/gh/dpep/network_resiliency_rb)
 
-Making network requests more resilient to error.
-- less errors, by retrying
-- less time, by setting granular timeouts
+Making network requests more resilient
+- waste less time on failures by using dynamic, granular timeouts and deadeline propagation
+- reduce errors by automatically retrying idempotent calls
+- observe every network connection and request
 
 
 ```ruby
