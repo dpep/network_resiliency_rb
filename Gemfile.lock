@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    network_resiliency (0.8.2)
+    network_resiliency (0.0.1)
 
 GEM
   remote: https://rubygems.org/
@@ -153,7 +153,7 @@ GEM
     multipart-post (2.4.1)
     mutex_m (0.2.0)
     mysql2 (0.5.6)
-    net-imap (0.4.14)
+    net-imap (0.4.17)
       date
       net-protocol
     net-pop (0.1.2)
