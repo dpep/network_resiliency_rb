@@ -1,15 +1,18 @@
 require_relative "lib/network_resiliency/version"
-package = NetworkResiliency
 
 Gem::Specification.new do |s|
   s.authors     = ["Daniel Pepper"]
-  s.description = "..."
+  s.description = <<~DESCRIPTION
+    Make network requests more resilient: dynamic per-call timeouts
+    with deadline propagation, automatic retries on idempotent calls,
+    and observability for every connection and request.
+  DESCRIPTION
   s.files       = `git ls-files * ':!:spec'`.split("\n")
   s.homepage    = "https://github.com/dpep/network_resiliency_rb"
   s.license     = "MIT"
-  s.name        = File.basename(__FILE__).split(".")[0]
-  s.summary     = package.to_s
-  s.version     = package.const_get "VERSION"
+  s.name        = "network_resiliency"
+  s.summary     = "NetworkResiliency"
+  s.version     = NetworkResiliency::VERSION
 
   s.required_ruby_version = ">= 3"
 
