@@ -1,5 +1,6 @@
-gem "faraday", "~> 1.10"
+gem "faraday", "~> 2"
 require "faraday"
+require "faraday/net_http"
 
 module NetworkResiliency
   module Adapter
