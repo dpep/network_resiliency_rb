@@ -279,16 +279,16 @@ PLATFORMS
 
 DEPENDENCIES
   byebug
-  datadog (~> 2)
+  datadog (>= 2)
   dogstatsd-ruby (~> 5)
   faraday (~> 1)
   faraday-rack
-  mysql2 (~> 0.5)
+  mysql2 (>= 0.5)
   network_resiliency!
-  pg (~> 1)
+  pg (~> 1.1)
   rack
   rack-test
-  rails (~> 8)
+  rails (>= 5)
   redis (~> 4)
   rspec
   rspec-rails
