@@ -1,4 +1,5 @@
 *.gem
+*.rdb
 .byebug_history
 coverage
 log
