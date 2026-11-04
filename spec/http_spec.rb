@@ -115,8 +115,11 @@ describe NetworkResiliency::Adapter::HTTP, :mock_socket do
       it "dynamically adjusts the timeout" do
         expect(http.open_timeout).to eq default_timeout
 
-        expect(Timeout).to receive(:timeout) do
-          expect(http.connect_timeout).to eq timeouts.first
+        # net/http applies open_timeout via Timeout.timeout or TCPSocket.open's
+        # open_timeout: kwarg depending on version, so check it at socket open
+        expect(TCPSocket).to receive(:open) do |*args|
+          expect(http.open_timeout).to eq timeouts.first
+          mock_server(*args)
         end
 
         subject
