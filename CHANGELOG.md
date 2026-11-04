@@ -1,3 +1,6 @@
+## Unreleased
+- Requires Ruby 3.2 or newer.
+
 ###  v0.8.2  (2024-03-13)
 - revert ddog sampling
 - Revert "lower secondary timeout"

@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
   s.summary     = "NetworkResiliency"
   s.version     = NetworkResiliency::VERSION
 
-  s.required_ruby_version = ">= 3"
+  s.required_ruby_version = ">= 3.2"
 
   s.add_development_dependency "byebug"
   s.add_development_dependency "datadog", ">= 2"
