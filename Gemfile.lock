@@ -97,7 +97,7 @@ GEM
       logger
       msgpack
     datadog-ruby_core_source (3.5.6)
-    date (3.5.1)
+    date (3.6.0)
     diff-lcs (1.6.2)
     docile (1.4.1)
     dogstatsd-ruby (5.6.4)
@@ -162,12 +162,12 @@ GEM
     multipart-post (2.4.1)
     mysql2 (0.5.7)
       bigdecimal
-    net-imap (0.6.3)
+    net-imap (0.6.4.1)
       date
       net-protocol
     net-pop (0.1.2)
       net-protocol
-    net-protocol (0.2.2)
+    net-protocol (0.4.0)
       timeout
     net-smtp (0.5.1)
       net-protocol
