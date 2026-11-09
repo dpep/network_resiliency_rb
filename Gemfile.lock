@@ -100,7 +100,7 @@ GEM
     date (3.6.0)
     diff-lcs (1.6.2)
     docile (1.4.1)
-    dogstatsd-ruby (5.6.4)
+    dogstatsd-ruby (5.7.1)
     drb (2.2.3)
     erb (6.0.4)
     erubi (1.13.1)
