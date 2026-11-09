@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 3.2"
 
-  s.add_development_dependency "byebug"
+  s.add_development_dependency "debug"
   s.add_development_dependency "datadog", ">= 2"
   s.add_development_dependency "dogstatsd-ruby", "~> 5"
   s.add_development_dependency "faraday", "~> 1"

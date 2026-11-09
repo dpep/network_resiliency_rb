@@ -1,4 +1,4 @@
-require "byebug"
+require "debug/prelude"
 require "datadog/statsd"
 require "fiber"
 require "pg"
