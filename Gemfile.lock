@@ -99,7 +99,6 @@ GEM
     datadog-ruby_core_source (3.5.6)
     date (3.6.0)
     diff-lcs (1.6.2)
-    docile (1.4.1)
     dogstatsd-ruby (5.7.1)
     drb (2.2.3)
     erb (6.0.4)
@@ -253,12 +252,7 @@ GEM
     rspec-support (3.13.7)
     ruby2_keywords (0.0.5)
     securerandom (0.4.1)
-    simplecov (0.22.0)
-      docile (~> 1.1)
-      simplecov-html (~> 0.11)
-      simplecov_json_formatter (~> 0.1)
-    simplecov-html (0.13.2)
-    simplecov_json_formatter (0.1.4)
+    simplecov (1.2.0)
     stringio (3.2.0)
     thor (1.5.0)
     timecop (0.9.11)
@@ -292,7 +286,7 @@ DEPENDENCIES
   redis (~> 4)
   rspec
   rspec-rails
-  simplecov
+  simplecov (>= 1)
   timecop
 
 BUNDLED WITH
