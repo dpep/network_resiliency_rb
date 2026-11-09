@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 3.2"
 
-  s.add_development_dependency "byebug"
+  s.add_development_dependency "debug"
   s.add_development_dependency "datadog", ">= 2"
   s.add_development_dependency "dogstatsd-ruby", "~> 5"
   s.add_development_dependency "faraday", "~> 1"
@@ -29,6 +29,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency "redis", "~> 4"
   s.add_development_dependency "rspec"
   s.add_development_dependency "rspec-rails"
-  s.add_development_dependency "simplecov"
+  s.add_development_dependency "simplecov", ">= 1"
   s.add_development_dependency "timecop"
 end

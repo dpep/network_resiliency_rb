@@ -1,4 +1,4 @@
-require "byebug"
+require "debug/prelude"
 require "datadog/statsd"
 require "fiber"
 require "pg"
@@ -10,7 +10,7 @@ require "simplecov"
 require "timecop"
 
 SimpleCov.start do
-  add_filter "/spec/"
+  skip "/spec/"
 end
 
 if ENV["CI"] == "true" || ENV["CODECOV_TOKEN"]
