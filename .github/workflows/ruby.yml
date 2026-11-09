@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby-version: [ "4.0", "3.4", "3.3", "3.2" ]
+        ruby-version: [ "4.0", "3.4", "3.3" ]
 
     name: Ruby ${{ matrix.ruby-version }}
 
