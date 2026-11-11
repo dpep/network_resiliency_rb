@@ -49,8 +49,9 @@ RSpec.configure do |config|
     # disable background sync
     allow(NetworkResiliency::Syncer).to receive(:start)
 
-    # since Timecop doesn't work with Process.clock_gettime
-    allow(Process).to receive(:clock_gettime).and_return(*(1..1_000))
+    # Timecop doesn't cover Process.clock_gettime. Stub only this gem's clock,
+    # since Socket.tcp and redis-client need the real one.
+    allow(NetworkResiliency).to receive(:timestamp).and_return(*(1..1_000).map { _1 * 1_000 })
 
     # stub adapters so patches reset after each example
     stub_const("Mysql2::Client", Class.new(Mysql2::Client))

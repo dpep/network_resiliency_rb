@@ -1,6 +1,8 @@
-describe NetworkResiliency::Adapter::Redis, :mock_redis do
-  let(:redis) { Redis.new(url: "redis://#{host}") }
+describe NetworkResiliency::Adapter::Redis do
+  # isolate this gem's retries from redis-client's own reconnect retries
+  let(:redis) { Redis.new(host:, reconnect_attempts: 0) }
   let(:host) { "localhost" }
+  let(:client) { redis._client }
 
   describe ".patch" do
     subject { described_class.patched?(redis) }
@@ -26,7 +28,6 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
       it { expect(described_class.patched?).to be true }
 
       it "does not double patch" do
-        client = redis.instance_variable_get(:@client)
         expect(client.singleton_class).not_to receive(:prepend)
 
         described_class.patch(redis)
@@ -41,29 +42,23 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
       end
     end
 
-    context "when using Redis in cluster mode" do
-      before do
-        allow(Redis::Cluster).to receive(:new).and_return(instance_double(Redis::Cluster))
-      end
+    context "when the Redis client is unsupported" do
+      before { redis.instance_variable_set(:@client, Object.new) }
 
-      let(:redis) { Redis.new(cluster: ['redis://localhost']) }
-
-      it "is not supported" do
+      it "fails fast" do
         expect {
           described_class.patch(redis)
-        }.to raise_error(ArgumentError, /unsupported.*Cluster/)
+        }.to raise_error(ArgumentError, /unsupported/)
       end
     end
   end
 
-  describe ".connect" do
+  describe "connect" do
     subject(:connect) do
-      client rescue Redis::CannotConnectError
+      redis.ping rescue Redis::CannotConnectError
 
       NetworkResiliency
     end
-
-    let(:client) { redis._client.connect }
 
     before do
       described_class.patch(redis)
@@ -78,24 +73,24 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
         duration: be_a(Numeric),
         error: nil,
         timeout: be_a(Numeric),
-        attempts: be_an(Integer),
+        attempts: 1,
       )
     end
 
-    it { expect(client).to be_connected }
+    it { expect(redis.ping).to eq "PONG" }
 
     context "when server connection times out" do
       before do
-        allow(Redis::Connection::Ruby).to receive(:connect).and_raise(Redis::TimeoutError)
+        allow(Socket).to receive(:tcp).and_raise(Errno::ETIMEDOUT)
       end
 
       it "raises an error" do
-        expect { client }.to raise_error(Redis::CannotConnectError)
+        expect { redis.ping }.to raise_error(Redis::CannotConnectError)
       end
 
       it "logs the underlying error" do
         is_expected.to have_received(:record).with(
-          include(error: Redis::TimeoutError),
+          include(action: :connect, error: Errno::ETIMEDOUT),
         )
       end
     end
@@ -103,21 +98,8 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
     context "when NetworkResiliency is disabled" do
       before { NetworkResiliency.disable! }
 
-      it "does not call datadog" do
-        is_expected.not_to have_received(:record)
-      end
-
-      context "when server connection times out" do
-        let(:host) { "timeout" }
-
-        it "raises an error" do
-          expect { client }.to raise_error(Redis::CannotConnectError)
-        end
-
-        it "does not log timeout" do
-          is_expected.not_to have_received(:record)
-        end
-      end
+      it { expect(redis.ping).to eq "PONG" }
+      it { is_expected.not_to have_received(:record) }
     end
 
     describe "resilient mode" do
@@ -127,16 +109,16 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
         allow(NetworkResiliency).to receive(:timeouts_for) { timeouts.dup }
       end
 
-      let(:default_timeout) { Redis::Client::DEFAULTS[:timeout] }
-      let(:timeouts) { [ 10, 100 ].freeze }
+      let(:default_timeout) { RedisClient::Config::DEFAULT_TIMEOUT }
+      let(:timeouts) { [ 0.5, 2 ].freeze }
 
-      it { expect(client).to be_connected }
-      it { expect(client.connect_timeout).to eq default_timeout }
-      it { expect(timeouts.first).not_to eq default_timeout }
+      it { expect(redis.ping).to eq "PONG" }
 
       it "dynamically adjusts the timeout" do
-        expect(Redis::Connection::Ruby).to receive(:connect) do |config|
-          expect(config[:connect_timeout]).to eq timeouts.first
+        expect(RedisClient::RubyConnection).to receive(:new).and_wrap_original do |original, *args, **kwargs|
+          expect(kwargs[:connect_timeout]).to eq timeouts.first
+
+          original.call(*args, **kwargs)
         end
 
         connect
@@ -149,32 +131,21 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
       end
 
       context "when server connection times out" do
-        let(:host) { "timeout" }
+        before do
+          allow(Socket).to receive(:tcp).and_raise(Errno::ETIMEDOUT)
+        end
 
         it "raises an error" do
-          expect { client }.to raise_error(Redis::CannotConnectError)
+          expect { redis.ping }.to raise_error(Redis::CannotConnectError)
         end
 
-        it "logs timeout" do
-          is_expected.to have_received(:record).with(
-            include(error: Redis::TimeoutError),
-          )
-        end
-
-        it "retries" do
-          expect(Redis::Connection::Ruby).to receive(:connect).twice
-
-          connect
-        end
-
-        it "dynamically adjusts the timeout each time" do
+        it "retries, adjusting the timeout each time" do
           attempt = 0
-          expect(Redis::Connection::Ruby).to receive(:connect).twice do |config|
-            expect(config[:connect_timeout]).to eq timeouts[attempt]
-
+          expect(RedisClient::RubyConnection).to receive(:new).twice.and_wrap_original do |original, *args, **kwargs|
+            expect(kwargs[:connect_timeout]).to eq timeouts[attempt]
             attempt += 1
 
-            raise Redis::TimeoutError
+            original.call(*args, **kwargs)
           end
 
           connect
@@ -183,7 +154,8 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
         it "logs the failed attempts" do
           is_expected.to have_received(:record).with(
             include(
-              error: Redis::TimeoutError,
+              action: :connect,
+              error: Errno::ETIMEDOUT,
               attempts: 2,
             ),
           )
@@ -192,21 +164,22 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
 
       context "when server connects on the second attempt" do
         before do
-          allow(Redis::Connection::Ruby).to receive(:connect) do
+          allow(Socket).to receive(:tcp).and_wrap_original do |original, *args, **kwargs|
             if @attempted.nil?
               @attempted = true
-              raise Redis::TimeoutError
+              raise Errno::ETIMEDOUT
             end
 
-            mock_redis(host: host)
+            original.call(*args, **kwargs)
           end
         end
 
-        it { expect(client).to be_connected }
+        it { expect(redis.ping).to eq "PONG" }
 
         it "logs" do
           is_expected.to have_received(:record).with(
             include(
+              action: :connect,
               error: nil,
               attempts: 2,
             ),
@@ -216,20 +189,19 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
     end
   end
 
-  describe ".call" do
+  describe "call" do
     subject(:ping) do
-      redis.ping rescue Redis::CannotConnectError
+      redis.ping rescue Redis::BaseConnectionError
 
       NetworkResiliency
     end
-    let(:client) { redis._client }
 
     before do
       described_class.patch(redis)
       allow(NetworkResiliency).to receive(:record)
     end
 
-    it "logs connection" do
+    it "logs request" do
       is_expected.to have_received(:record).with(
         adapter: :redis,
         action: :request,
@@ -237,7 +209,7 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
         duration: be_a(Numeric),
         error: nil,
         timeout: be_a(Numeric),
-        attempts: be_an(Integer),
+        attempts: 1,
       )
     end
 
@@ -255,14 +227,18 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
       it { is_expected.not_to have_received(:record) }
     end
 
-    context "when there is a System Error" do
+    context "when the request times out" do
       before do
-        allow(client).to receive(:read).and_raise(Errno::ETIMEDOUT)
+        allow_any_instance_of(RedisClient::RubyConnection).to receive(:call).and_raise(RedisClient::ReadTimeoutError)
       end
 
-      it "logs the error" do
+      it "raises an error" do
+        expect { redis.ping }.to raise_error(Redis::TimeoutError)
+      end
+
+      it "logs the underlying error" do
         is_expected.to have_received(:record).with(
-          include(error: Errno::ETIMEDOUT),
+          include(action: :request, error: RedisClient::ReadTimeoutError),
         )
       end
     end
@@ -274,36 +250,35 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
         allow(NetworkResiliency).to receive(:timeouts_for) { timeouts.dup }
       end
 
-      let(:default_timeout) { Redis::Client::DEFAULTS[:timeout] }
-      let(:timeouts) { [ 10, 100 ].freeze }
+      let(:timeouts) { [ 0.5, 2 ].freeze }
 
       context "when server times out" do
-        it "retries" do
-          expect(client).to receive(:read).twice.and_raise(Redis::TimeoutError)
-
-          ping
-        end
-
-        it "dynamically adjusts the timeout each time" do
-          attempt = 0
-          expect(client).to receive(:read).twice do
-            expect(client.options[:read_timeout]).to eq timeouts[attempt]
-
-            attempt += 1
-
-            raise Redis::TimeoutError
+        it "retries, adjusting the timeout each time" do
+          # redis-client reconnects after a timeout, so each attempt is a new connection
+          attempts = []
+          allow_any_instance_of(RedisClient::RubyConnection).to receive(:call) do
+            attempts << client.read_timeout
+            raise RedisClient::ReadTimeoutError
           end
 
           ping
+
+          expect(attempts).to eq timeouts
+        end
+
+        it "restores the original timeout" do
+          allow_any_instance_of(RedisClient::RubyConnection).to receive(:call).and_raise(RedisClient::ReadTimeoutError)
+
+          expect { ping }.not_to change(client, :read_timeout)
         end
       end
 
       context "when request succeeds on the second attempt" do
         before do
-          allow(client).to receive(:read).and_wrap_original do |original, *args|
+          allow_any_instance_of(RedisClient::RubyConnection).to receive(:call).and_wrap_original do |original, *args|
             if @attempted.nil?
               @attempted = true
-              raise Redis::TimeoutError
+              raise RedisClient::ReadTimeoutError
             end
 
             original.call(*args)
@@ -315,6 +290,7 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
         it "logs" do
           is_expected.to have_received(:record).with(
             include(
+              action: :request,
               error: nil,
               attempts: 2,
             ),
@@ -322,38 +298,36 @@ describe NetworkResiliency::Adapter::Redis, :mock_redis do
         end
       end
 
-      context "when command is not idepotent" do
+      context "when command is not idempotent" do
         subject(:command) do
-          redis.eval("retrun 'PING'") rescue Redis::TimeoutError
+          redis.eval("return 'PING'") rescue Redis::TimeoutError
         end
 
-        it "does not retry" do
-          expect(client).to receive(:read).once.and_raise(Redis::TimeoutError)
-
-          command
-        end
-
-        it "uses the most lenient timeout" do
-          expect(client).to receive(:read) do
-            expect(client.options[:read_timeout]).to eq timeouts.last
+        it "does not retry, using the most lenient timeout" do
+          attempts = []
+          allow_any_instance_of(RedisClient::RubyConnection).to receive(:call) do
+            attempts << client.read_timeout
+            raise RedisClient::ReadTimeoutError
           end
 
           command
+
+          expect(attempts).to eq [ timeouts.last ]
         end
       end
 
       context "when command has many arguments" do
         subject(:command) do
           keys = 12.times.map { |i| "key_#{i}" }
-          redis.mget(*keys) rescue Redis::CommandError
+          redis.mget(*keys)
         end
 
         it "augments the destination with an order of magnitude" do
-          expect(NetworkResiliency).to receive(:record).with(
+          command
+
+          expect(NetworkResiliency).to have_received(:record).with(
             include(destination: "#{host}:mget:10"),
           )
-
-          command
         end
       end
     end
