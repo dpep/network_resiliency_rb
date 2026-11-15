@@ -8,6 +8,8 @@ module NetworkResiliency
       def patch(instance = nil)
         return if patched?(instance)
 
+        ::RedisClient::Config::Common.prepend(NoReconnect)
+
         if instance
           unless instance.is_a?(::Redis)
             raise ArgumentError, "expected Redis instance, found: #{instance}"
@@ -52,6 +54,17 @@ module NetworkResiliency
         "smembers",
         "smismember",
       ].freeze
+
+      RETRY_GUARD = :network_resiliency_redis_no_reconnect
+
+      # redis-client's only gate on its own reconnect retry
+      module NoReconnect
+        def retry_connecting?(...)
+          return false if Thread.current[RETRY_GUARD].equal?(self)
+
+          super
+        end
+      end
 
       refine ::Redis::Client do
         private
@@ -109,6 +122,15 @@ module NetworkResiliency
           end
         end
 
+        # redis-client's own reconnect retry would stack on top of ours
+        def without_reconnect
+          previous = Thread.current[RETRY_GUARD]
+          Thread.current[RETRY_GUARD] = config
+          yield
+        ensure
+          Thread.current[RETRY_GUARD] = previous
+        end
+
         def idempotent?(command)
           NetworkResiliency::Adapter::Redis::IDEMPOTENT_COMMANDS.include?(command)
         end
@@ -136,7 +158,9 @@ module NetworkResiliency
 
           idempotent = idempotent?(command_key)
 
-          with_resilience(:request, destination, idempotent) { super }
+          without_reconnect do
+            with_resilience(:request, destination, idempotent) { super }
+          end
         end
 
         private

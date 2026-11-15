@@ -1,6 +1,7 @@
 describe NetworkResiliency::Adapter::Redis do
-  # isolate this gem's retries from redis-client's own reconnect retries
-  let(:redis) { Redis.new(host:, reconnect_attempts: 0) }
+  # default reconnect_attempts, so attempt counts prove redis-client's own
+  # retries don't stack on ours
+  let(:redis) { Redis.new(host:) }
   let(:host) { "localhost" }
   let(:client) { redis._client }
 
@@ -240,6 +241,37 @@ describe NetworkResiliency::Adapter::Redis do
         is_expected.to have_received(:record).with(
           include(action: :request, error: RedisClient::ReadTimeoutError),
         )
+      end
+
+      it "restores redis-client's own retry afterwards" do
+        ping
+
+        expect(client.config.retry_connecting?(0, nil)).to be true
+      end
+    end
+
+    context "when the request times out once" do
+      before do
+        allow_any_instance_of(RedisClient::RubyConnection).to receive(:call).and_wrap_original do |original, *args|
+          if @attempted.nil?
+            @attempted = true
+            raise RedisClient::ReadTimeoutError
+          end
+
+          original.call(*args)
+        end
+      end
+
+      it "owns retries, so redis-client does not retry" do
+        expect { redis.ping }.to raise_error(Redis::TimeoutError)
+      end
+
+      context "when NetworkResiliency is disabled" do
+        before { NetworkResiliency.disable! }
+
+        it "leaves redis-client's retry in place" do
+          expect(redis.ping).to eq "PONG"
+        end
       end
     end
 
