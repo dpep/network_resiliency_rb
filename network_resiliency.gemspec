@@ -26,7 +26,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rack"
   s.add_development_dependency "rack-test"
   s.add_development_dependency "rails", ">= 5"
-  s.add_development_dependency "redis", "~> 4"
+  s.add_development_dependency "redis", "~> 6"
   s.add_development_dependency "rspec"
   s.add_development_dependency "rspec-rails"
   s.add_development_dependency "simplecov", ">= 1"

@@ -1,5 +1,8 @@
 ## Unreleased
 - Requires Ruby 3.3 or newer.
+- Redis adapter supports redis 5+ (built on redis-client) and drops redis 4. Upgrade the redis gem before upgrading this gem.
+- Redis requests are no longer retried after a failed connect; connects retry on their own.
+- While instrumenting a Redis command, this gem owns retries: redis's `reconnect_attempts` doesn't apply, in any mode. Pipelines and blocking calls are not instrumented and keep it.
 
 ###  v0.8.2  (2024-03-13)
 - revert ddog sampling

@@ -229,7 +229,10 @@ GEM
       prism (>= 1.6.0)
       rbs (>= 4.0.0)
       tsort
-    redis (4.8.1)
+    redis (6.0.0)
+      redis-client (= 0.30.1)
+    redis-client (0.30.1)
+      connection_pool
     reline (0.6.3)
       io-console (~> 0.5)
     rspec (3.13.2)
@@ -285,7 +288,7 @@ DEPENDENCIES
   rack
   rack-test
   rails (>= 5)
-  redis (~> 4)
+  redis (~> 6)
   rspec
   rspec-rails
   simplecov (>= 1)

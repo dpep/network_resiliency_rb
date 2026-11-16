@@ -8,12 +8,14 @@ module NetworkResiliency
       def patch(instance = nil)
         return if patched?(instance)
 
+        ::RedisClient::Config::Common.prepend(NoReconnect)
+
         if instance
           unless instance.is_a?(::Redis)
             raise ArgumentError, "expected Redis instance, found: #{instance}"
           end
 
-          client = instance.instance_variable_get(:@client)
+          client = instance._client
 
           unless client.is_a?(::Redis::Client)
             raise ArgumentError, "unsupported Redis client: #{client}"
@@ -53,18 +55,29 @@ module NetworkResiliency
         "smismember",
       ].freeze
 
+      RETRY_GUARD = :network_resiliency_redis_no_reconnect
+
+      # redis-client's only gate on its own reconnect retry
+      module NoReconnect
+        def retry_connecting?(...)
+          return false if Thread.current[RETRY_GUARD].equal?(self)
+
+          super
+        end
+      end
+
       refine ::Redis::Client do
         private
 
         def with_resilience(action, destination, idempotent, &block)
           timeout_key = action == :connect ? :connect_timeout : :read_timeout
-          original_timeout = @options[timeout_key]
+          original_timeout = public_send(timeout_key)
 
           timeouts = NetworkResiliency.timeouts_for(
             adapter: :redis,
             action: action,
             destination: destination,
-            max: @options[timeout_key],
+            max: original_timeout,
             units: :seconds,
           )
 
@@ -80,25 +93,22 @@ module NetworkResiliency
             attempts += 1
             error = nil
 
-            @options[timeout_key] = timeouts.shift
+            public_send("#{timeout_key}=", timeouts.shift)
 
-            without_reconnect { yield }
-          rescue ::Redis::BaseConnectionError, SystemCallError => e
-            # capture error
+            yield
+          rescue ::Redis::BaseConnectionError, ::RedisClient::ConnectionError => e
+            # Redis wraps RedisClient errors, which wrap socket errors
+            error = (e.cause || e).class
 
-            # grab underlying exception within Redis wrapper
-            error = if e.is_a?(::Redis::BaseConnectionError)
-              e.cause.class
-            else
-              e.class
-            end
+            # the connect action already retried
+            raise if e.is_a?(::Redis::CannotConnectError)
 
             retry if timeouts.size > 0
 
             raise
           ensure
             ts += NetworkResiliency.timestamp
-            @options[timeout_key] = original_timeout
+            public_send("#{timeout_key}=", original_timeout)
 
             NetworkResiliency.record(
               adapter: :redis,
@@ -106,10 +116,19 @@ module NetworkResiliency
               destination: destination,
               duration: ts,
               error: error,
-              timeout: @options[timeout_key].to_f * 1_000,
+              timeout: original_timeout.to_f * 1_000,
               attempts: attempts,
             )
           end
+        end
+
+        # redis-client's own reconnect retry would stack on top of ours
+        def without_reconnect
+          previous = Thread.current[RETRY_GUARD]
+          Thread.current[RETRY_GUARD] = config
+          yield
+        ensure
+          Thread.current[RETRY_GUARD] = previous
         end
 
         def idempotent?(command)
@@ -121,17 +140,13 @@ module NetworkResiliency
         using NetworkResiliency::Refinements
         using NetworkResiliency::Adapter::Redis
 
-        def establish_connection
-          return super unless NetworkResiliency.enabled?(:redis)
-
-          with_resilience(:connect, host, true) { super }
-        end
-
-        def call(command)
+        # Redis routes single commands through #call_v; pipelines and blocking
+        # calls bypass it
+        def call_v(command)
           return super unless NetworkResiliency.enabled?(:redis)
           return super unless command.is_a?(Array)
 
-          command_key = command.first.to_s
+          command_key = command.first.to_s.downcase
 
           # larger commands may have larger timeouts
           command_size = command.size.order_of_magnitude
@@ -143,10 +158,19 @@ module NetworkResiliency
 
           idempotent = idempotent?(command_key)
 
-          with_resilience(:request, destination, idempotent) { super }
+          without_reconnect do
+            with_resilience(:request, destination, idempotent) { super }
+          end
+        end
+
+        private
+
+        def connect
+          return super unless NetworkResiliency.enabled?(:redis)
+
+          with_resilience(:connect, host, true) { super }
         end
       end
     end
   end
 end
-
